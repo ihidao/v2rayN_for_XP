@@ -1093,8 +1093,8 @@ namespace v2rayN.Handler
             bool useModernArguments;
             bool versionDetected = TryDetectCoreVersion(fileName, out detectedVersion,
                 out useModernArguments);
-            string primaryArguments = (versionDetected && !useModernArguments ? "-config \"" :
-                "run -c \"") + configFile + "\"";
+            string primaryArguments = (versionDetected ? "run -c \"" :
+                "-config \"") + configFile + "\"";
             string primaryError;
             long primaryElapsed;
             string startedVersion;
@@ -1107,7 +1107,7 @@ namespace v2rayN.Handler
                 totalWatch.Stop();
                 startupElapsedMs = totalWatch.ElapsedMilliseconds;
                 coreNameVersion = String.IsNullOrEmpty(detectedVersion) ? startedVersion : detectedVersion;
-                usedLegacyArguments = versionDetected && !useModernArguments;
+                usedLegacyArguments = !versionDetected;
                 failure = String.Empty;
                 Utils.SaveLog("[CoreStartup] PID=" + p.Id
                     + "; core=" + coreNameVersion

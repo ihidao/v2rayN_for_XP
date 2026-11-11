@@ -996,8 +996,7 @@ namespace v2rayN.Handler
             coreNameVersion = String.Empty;
             useModernArguments = false;
 
-            string[] versionArguments = new string[] { "version", "-version" };
-            foreach (string arguments in versionArguments)
+            string arguments = "version";
             {
                 Process probe = new Process();
                 StringBuilder output = new StringBuilder();

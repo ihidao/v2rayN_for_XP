@@ -990,82 +990,82 @@ namespace v2rayN.Handler
         /// version string indicate support for the modern "run -c" syntax.
         /// Otherwise use the legacy "-config" syntax.
         /// </summary>
+        /// <summary>
+        /// A successful "version" query with a recognized version string indicates
+        /// support for the modern "run -c" syntax; otherwise use legacy "-config".
+        /// </summary>
         private bool TryDetectCoreVersion(string fileName, out string coreNameVersion,
             out bool useModernArguments)
         {
             coreNameVersion = String.Empty;
             useModernArguments = false;
-
-            string arguments = "version";
+            Process probe = new Process();
+            StringBuilder output = new StringBuilder();
+            object outputLock = new object();
+            try
             {
-                Process probe = new Process();
-                StringBuilder output = new StringBuilder();
-                object outputLock = new object();
-                try
+                probe.StartInfo = new ProcessStartInfo
                 {
-                    probe.StartInfo = new ProcessStartInfo
+                    FileName = fileName,
+                    Arguments = "version",
+                    WorkingDirectory = Utils.StartupPath(),
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = Encoding.UTF8
+                };
+                DataReceivedEventHandler capture = (sender, e) =>
+                {
+                    if (!String.IsNullOrEmpty(e.Data))
                     {
-                        FileName = fileName,
-                        Arguments = arguments,
-                        WorkingDirectory = Utils.StartupPath(),
-                        UseShellExecute = false,
-                        RedirectStandardOutput = true,
-                        RedirectStandardError = true,
-                        CreateNoWindow = true,
-                        StandardOutputEncoding = Encoding.UTF8
-                    };
-                    DataReceivedEventHandler capture = (sender, e) =>
-                    {
-                        if (!String.IsNullOrEmpty(e.Data))
-                        {
-                            lock (outputLock) output.AppendLine(e.Data);
-                        }
-                    };
-                    probe.OutputDataReceived += capture;
-                    probe.ErrorDataReceived += capture;
-
-                    if (!probe.Start())
-                        continue;
-                    probe.BeginOutputReadLine();
-                    probe.BeginErrorReadLine();
-
-                    if (!probe.WaitForExit(3000))
-                    {
-                        try { probe.Kill(); probe.WaitForExit(1000); } catch { }
-                        continue;
+                        lock (outputLock) output.AppendLine(e.Data);
                     }
-                    probe.WaitForExit();
+                };
+                probe.OutputDataReceived += capture;
+                probe.ErrorDataReceived += capture;
 
-                    string versionOutput;
-                    lock (outputLock) versionOutput = output.ToString();
+                if (!probe.Start())
+                    throw new InvalidOperationException("Version query process did not start.");
 
-                    Match match = Regex.Match(versionOutput,
-                        @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.(\d+))?");
-                    if (probe.ExitCode != 0 || !match.Success)
-                        continue;
-
-                    coreNameVersion = match.Groups[1].Value + " "
-                        + match.Groups[2].Value + "." + match.Groups[3].Value
-                        + (match.Groups[4].Success ? "." + match.Groups[4].Value : String.Empty);
-                    useModernArguments = true;
-                    Utils.SaveLog("[CoreStartup] Version query succeeded: " + coreNameVersion
-                        + "; using modern config argument -c.");
-                    return true;
-                }
-                catch (Exception ex)
+                probe.BeginOutputReadLine();
+                probe.BeginErrorReadLine();
+                if (!probe.WaitForExit(3000))
                 {
-                    Utils.SaveLog("[CoreStartup] Version query '" + arguments
-                        + "' failed: " + ex.Message);
+                    try { probe.Kill(); probe.WaitForExit(1000); } catch { }
+                    Utils.SaveLog("[CoreStartup] Version query timed out; using -config.");
+                    return false;
                 }
-                finally
+                probe.WaitForExit();
+
+                string versionOutput;
+                lock (outputLock) versionOutput = output.ToString();
+                Match match = Regex.Match(versionOutput,
+                    @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.(\d+))?");
+                if (probe.ExitCode != 0 || !match.Success)
                 {
-                    try { probe.Dispose(); } catch { }
+                    Utils.SaveLog("[CoreStartup] Version query failed or returned no valid version; "
+                        + "using legacy config argument -config.");
+                    return false;
                 }
+
+                coreNameVersion = match.Groups[1].Value + " "
+                    + match.Groups[2].Value + "." + match.Groups[3].Value
+                    + (match.Groups[4].Success ? "." + match.Groups[4].Value : String.Empty);
+                useModernArguments = true;
+                Utils.SaveLog("[CoreStartup] Version query succeeded: " + coreNameVersion
+                    + "; using modern config argument -c.");
+                return true;
             }
-
-            Utils.SaveLog("[CoreStartup] Version query failed or returned no valid version; "
-                + "using legacy config argument -config.");
-            return false;
+            catch (Exception ex)
+            {
+                Utils.SaveLog("[CoreStartup] Version query failed; using -config. " + ex.Message);
+                return false;
+            }
+            finally
+            {
+                try { probe.Dispose(); } catch { }
+            }
         }
 
         private bool IsArgumentCompatibilityError(string error)

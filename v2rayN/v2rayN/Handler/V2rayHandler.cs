@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Runtime.InteropServices;
 using v2rayN.Mode;
 
@@ -980,6 +981,108 @@ namespace v2rayN.Handler
             return false;
         }
 
+        /// <summary>
+        /// 通过核心自身的 version 命令检测版本。优先使用现代子命令，
+        /// 再兼容旧版 -version 参数；检测失败时返回 false，由启动逻辑保留兼容回退。
+        /// </summary>
+        private bool TryDetectCoreVersion(string fileName, out string coreNameVersion,
+            out bool useModernArguments)
+        {
+            coreNameVersion = String.Empty;
+            useModernArguments = true;
+            string[] versionArguments = new string[] { "version", "-version" };
+
+            foreach (string arguments in versionArguments)
+            {
+                Process probe = new Process();
+                StringBuilder output = new StringBuilder();
+                object outputLock = new object();
+                try
+                {
+                    probe.StartInfo = new ProcessStartInfo
+                    {
+                        FileName = fileName,
+                        Arguments = arguments,
+                        WorkingDirectory = Utils.StartupPath(),
+                        UseShellExecute = false,
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        CreateNoWindow = true,
+                        StandardOutputEncoding = Encoding.UTF8
+                    };
+                    DataReceivedEventHandler capture = (sender, e) =>
+                    {
+                        if (!String.IsNullOrEmpty(e.Data))
+                        {
+                            lock (outputLock) output.AppendLine(e.Data);
+                        }
+                    };
+                    probe.OutputDataReceived += capture;
+                    probe.ErrorDataReceived += capture;
+
+                    if (!probe.Start())
+                        continue;
+                    probe.BeginOutputReadLine();
+                    probe.BeginErrorReadLine();
+
+                    if (!probe.WaitForExit(3000))
+                    {
+                        try { probe.Kill(); probe.WaitForExit(1000); } catch { }
+                        continue;
+                    }
+                    // WaitForExit() also waits for asynchronous output handlers to drain.
+                    probe.WaitForExit();
+
+                    string text;
+                    lock (outputLock) text = output.ToString();
+                    Match match = Regex.Match(text,
+                        @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.\d+)?");
+                    if (!match.Success)
+                        continue;
+
+                    string coreName = match.Groups[1].Value;
+                    int major;
+                    if (!Int32.TryParse(match.Groups[2].Value, out major))
+                        continue;
+
+                    coreNameVersion = coreName + " " + match.Groups[2].Value + "."
+                        + match.Groups[3].Value;
+                    // V2Ray 5.x and Xray 1.x use the modern "run -c" CLI.
+                    // V2Ray 4.x and older use the legacy "-config" CLI.
+                    useModernArguments = String.Equals(coreName, "Xray",
+                        StringComparison.OrdinalIgnoreCase) ? major >= 1 : major >= 5;
+                    Utils.SaveLog("[CoreStartup] Detected " + coreNameVersion
+                        + " using version command '" + arguments + "'; config-arg="
+                        + (useModernArguments ? "-c" : "-config") + ".");
+                    return true;
+                }
+                catch (Exception ex)
+                {
+                    Utils.SaveLog("[CoreStartup] Version probe '" + arguments
+                        + "' failed: " + ex.Message);
+                }
+                finally
+                {
+                    try { probe.Dispose(); } catch { }
+                }
+            }
+
+            Utils.SaveLog("[CoreStartup] Core version could not be detected; using compatibility fallback.");
+            return false;
+        }
+
+        private bool IsArgumentCompatibilityError(string error)
+        {
+            if (String.IsNullOrEmpty(error)) return false;
+            string value = error.ToLowerInvariant();
+            return value.Contains("unknown command")
+                || value.Contains("unknown flag")
+                || value.Contains("unknown shorthand flag")
+                || value.Contains("flag provided but not defined")
+                || value.Contains("unknown option")
+                || value.Contains("flag provided but not defined");
+        }
+
         private Process StartCoreWithFallback(string fileName, string configFile, List<int> ports, bool checkUdp,
             bool saveLogs, out string failure, out long startupElapsedMs, out bool usedLegacyArguments,
             out string coreNameVersion)
@@ -989,60 +1092,90 @@ namespace v2rayN.Handler
             usedLegacyArguments = false;
             coreNameVersion = "V2Ray";
 
-            string error5;
-            long attempt5Ms;
-            string version5;
-            bool canTryLegacy;
-            Process p = TryStartCore(fileName, "run -c \"" + configFile + "\"", ports, checkUdp, saveLogs,
-                out error5, out attempt5Ms, out version5, out canTryLegacy);
+            string detectedVersion;
+            bool useModernArguments;
+            bool versionDetected = TryDetectCoreVersion(fileName, out detectedVersion,
+                out useModernArguments);
+            string primaryArguments = (versionDetected && !useModernArguments ? "-config \"" :
+                "run -c \"") + configFile + "\"";
+            string primaryError;
+            long primaryElapsed;
+            string startedVersion;
+            bool canFallback;
+
+            Process p = TryStartCore(fileName, primaryArguments, ports, checkUdp, saveLogs,
+                out primaryError, out primaryElapsed, out startedVersion, out canFallback);
             if (p != null)
             {
                 totalWatch.Stop();
                 startupElapsedMs = totalWatch.ElapsedMilliseconds;
-                coreNameVersion = version5;
-                failure = string.Empty;
+                coreNameVersion = String.IsNullOrEmpty(detectedVersion) ? startedVersion : detectedVersion;
+                usedLegacyArguments = versionDetected && !useModernArguments;
+                failure = String.Empty;
                 Utils.SaveLog("[CoreStartup] PID=" + p.Id
                     + "; core=" + coreNameVersion
-                    + "; config-arg=-c; elapsed=" + startupElapsedMs
-                    + " ms; SOCKS ready.");
+                    + "; config-arg=" + (usedLegacyArguments ? "-config" : "-c")
+                    + "; elapsed=" + startupElapsedMs + " ms; SOCKS ready.");
                 return p;
             }
 
-            if (!canTryLegacy)
+            if (!canFallback)
             {
                 totalWatch.Stop();
                 startupElapsedMs = totalWatch.ElapsedMilliseconds;
-                failure = UIRes.I18N("NewCoreStartupFailedNoFallback")
-                    + Environment.NewLine + error5;
+                failure = primaryError;
                 return null;
             }
 
-            Utils.SaveLog("[CoreStartup] config-arg=-c failed after " + attempt5Ms
-                + " ms; trying config-arg=-config. " + error5);
+            // 已检测到版本时，仅在明确的命令行参数不兼容错误下尝试另一套参数。
+            // 配置错误、端口冲突、SOCKS 未就绪等问题不再触发无意义的二次启动。
+            // 版本检测失败时保留旧版的双参数兼容策略。
+            bool shouldFallback = versionDetected
+                ? IsArgumentCompatibilityError(primaryError)
+                : true;
+            if (!shouldFallback)
+            {
+                totalWatch.Stop();
+                startupElapsedMs = totalWatch.ElapsedMilliseconds;
+                failure = primaryError;
+                Utils.SaveLog("[CoreStartup] Startup failed; no argument fallback because the error "
+                    + "does not indicate CLI incompatibility. " + primaryError);
+                return null;
+            }
 
-            string error4;
-            long attempt4Ms;
-            string version4;
+            string fallbackArguments = (versionDetected && useModernArguments ? "-config \"" :
+                "run -c \"") + configFile + "\"";
+            Utils.SaveLog("[CoreStartup] Primary config argument failed after " + primaryElapsed
+                + " ms; trying compatibility argument. " + primaryError);
+
+            string fallbackError;
+            long fallbackElapsed;
+            string fallbackVersion;
             bool unusedCanFallback;
-            p = TryStartCore(fileName, "-config \"" + configFile + "\"", ports, checkUdp, saveLogs,
-                out error4, out attempt4Ms, out version4, out unusedCanFallback);
+            p = TryStartCore(fileName, fallbackArguments, ports, checkUdp, saveLogs,
+                out fallbackError, out fallbackElapsed, out fallbackVersion, out unusedCanFallback);
             totalWatch.Stop();
             startupElapsedMs = totalWatch.ElapsedMilliseconds;
             if (p != null)
             {
-                usedLegacyArguments = true;
-                coreNameVersion = version4;
-                failure = string.Empty;
+                usedLegacyArguments = fallbackArguments.StartsWith("-config ",
+                    StringComparison.Ordinal);
+                coreNameVersion = String.IsNullOrEmpty(detectedVersion) ? fallbackVersion : detectedVersion;
+                failure = String.Empty;
                 Utils.SaveLog("[CoreStartup] PID=" + p.Id
                     + "; core=" + coreNameVersion
-                    + "; config-arg=-config; elapsed=" + startupElapsedMs
-                    + " ms; SOCKS ready.");
+                    + "; config-arg=" + (usedLegacyArguments ? "-config" : "-c")
+                    + "; elapsed=" + startupElapsedMs + " ms; SOCKS ready.");
                 return p;
             }
 
             failure = UIRes.I18N("CoreStartupFailedBothArgs")
-                + Environment.NewLine + UIRes.I18N("NewArgsLabel") + Environment.NewLine + error5
-                + Environment.NewLine + UIRes.I18N("LegacyArgsLabel") + Environment.NewLine + error4;
+                + Environment.NewLine + UIRes.I18N("NewArgsLabel") + Environment.NewLine
+                + (primaryArguments.StartsWith("-config ", StringComparison.Ordinal)
+                    ? fallbackError : primaryError)
+                + Environment.NewLine + UIRes.I18N("LegacyArgsLabel") + Environment.NewLine
+                + (primaryArguments.StartsWith("-config ", StringComparison.Ordinal)
+                    ? primaryError : fallbackError);
             return null;
         }
 

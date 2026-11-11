@@ -1036,7 +1036,7 @@ namespace v2rayN.Handler
                     string text;
                     lock (outputLock) text = output.ToString();
                     Match match = Regex.Match(text,
-                        @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.\d+)?");
+                        @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.(\d+))?");
                     if (!match.Success)
                         continue;
 
@@ -1046,7 +1046,8 @@ namespace v2rayN.Handler
                         continue;
 
                     coreNameVersion = coreName + " " + match.Groups[2].Value + "."
-                        + match.Groups[3].Value;
+                        + match.Groups[3].Value
+                        + (match.Groups[4].Success ? "." + match.Groups[4].Value : String.Empty);
                     // V2Ray 5.x and Xray 1.x use the modern "run -c" CLI.
                     // V2Ray 4.x and older use the legacy "-config" CLI.
                     useModernArguments = String.Equals(coreName, "Xray",
@@ -1079,8 +1080,7 @@ namespace v2rayN.Handler
                 || value.Contains("unknown flag")
                 || value.Contains("unknown shorthand flag")
                 || value.Contains("flag provided but not defined")
-                || value.Contains("unknown option")
-                || value.Contains("flag provided but not defined");
+                || value.Contains("unknown option");
         }
 
         private Process StartCoreWithFallback(string fileName, string configFile, List<int> ports, bool checkUdp,

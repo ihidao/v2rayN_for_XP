@@ -985,13 +985,18 @@ namespace v2rayN.Handler
         /// 通过核心自身的 version 命令检测版本。优先使用现代子命令，
         /// 再兼容旧版 -version 参数；检测失败时返回 false，由启动逻辑保留兼容回退。
         /// </summary>
+        /// <summary>
+        /// Run the core's version command. A successful exit and a recognized
+        /// version string indicate support for the modern "run -c" syntax.
+        /// Otherwise use the legacy "-config" syntax.
+        /// </summary>
         private bool TryDetectCoreVersion(string fileName, out string coreNameVersion,
             out bool useModernArguments)
         {
             coreNameVersion = String.Empty;
-            useModernArguments = true;
-            string[] versionArguments = new string[] { "version", "-version" };
+            useModernArguments = false;
 
+            string[] versionArguments = new string[] { "version", "-version" };
             foreach (string arguments in versionArguments)
             {
                 Process probe = new Process();
@@ -1030,36 +1035,27 @@ namespace v2rayN.Handler
                         try { probe.Kill(); probe.WaitForExit(1000); } catch { }
                         continue;
                     }
-                    // WaitForExit() also waits for asynchronous output handlers to drain.
                     probe.WaitForExit();
 
-                    string text;
-                    lock (outputLock) text = output.ToString();
-                    Match match = Regex.Match(text,
+                    string versionOutput;
+                    lock (outputLock) versionOutput = output.ToString();
+
+                    Match match = Regex.Match(versionOutput,
                         @"(?im)\b(V2Ray|Xray)\s+v?(\d+)\.(\d+)(?:\.(\d+))?");
-                    if (!match.Success)
+                    if (probe.ExitCode != 0 || !match.Success)
                         continue;
 
-                    string coreName = match.Groups[1].Value;
-                    int major;
-                    if (!Int32.TryParse(match.Groups[2].Value, out major))
-                        continue;
-
-                    coreNameVersion = coreName + " " + match.Groups[2].Value + "."
-                        + match.Groups[3].Value
+                    coreNameVersion = match.Groups[1].Value + " "
+                        + match.Groups[2].Value + "." + match.Groups[3].Value
                         + (match.Groups[4].Success ? "." + match.Groups[4].Value : String.Empty);
-                    // V2Ray 5.x and Xray 1.x use the modern "run -c" CLI.
-                    // V2Ray 4.x and older use the legacy "-config" CLI.
-                    useModernArguments = String.Equals(coreName, "Xray",
-                        StringComparison.OrdinalIgnoreCase) ? major >= 1 : major >= 5;
-                    Utils.SaveLog("[CoreStartup] Detected " + coreNameVersion
-                        + " using version command '" + arguments + "'; config-arg="
-                        + (useModernArguments ? "-c" : "-config") + ".");
+                    useModernArguments = true;
+                    Utils.SaveLog("[CoreStartup] Version query succeeded: " + coreNameVersion
+                        + "; using modern config argument -c.");
                     return true;
                 }
                 catch (Exception ex)
                 {
-                    Utils.SaveLog("[CoreStartup] Version probe '" + arguments
+                    Utils.SaveLog("[CoreStartup] Version query '" + arguments
                         + "' failed: " + ex.Message);
                 }
                 finally
@@ -1068,7 +1064,8 @@ namespace v2rayN.Handler
                 }
             }
 
-            Utils.SaveLog("[CoreStartup] Core version could not be detected; using compatibility fallback.");
+            Utils.SaveLog("[CoreStartup] Version query failed or returned no valid version; "
+                + "using legacy config argument -config.");
             return false;
         }
 
@@ -1127,12 +1124,10 @@ namespace v2rayN.Handler
                 return null;
             }
 
-            // 已检测到版本时，仅在明确的命令行参数不兼容错误下尝试另一套参数。
-            // 配置错误、端口冲突、SOCKS 未就绪等问题不再触发无意义的二次启动。
-            // 版本检测失败时保留旧版的双参数兼容策略。
+            // 版本查询成功时，参数选择已有明确依据；仅在明确的 CLI 不兼容错误下回退。
+            // 版本查询失败时已按旧参数启动，不再反复尝试新参数。
             bool shouldFallback = versionDetected
-                ? IsArgumentCompatibilityError(primaryError)
-                : true;
+                && IsArgumentCompatibilityError(primaryError);
             if (!shouldFallback)
             {
                 totalWatch.Stop();

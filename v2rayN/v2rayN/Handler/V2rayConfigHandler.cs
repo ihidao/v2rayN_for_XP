@@ -100,33 +100,20 @@ namespace v2rayN.Handler
         {
             try
             {
-                if (blExport)
+                v2rayConfig.log.loglevel = config.loglevel;
+
+                // During normal operation, keep core output on stdout/stderr so
+                // v2rayN can display it and optionally save the same output.
+                // Exported configurations retain the original native file paths.
+                if (blExport && config.logEnabled)
                 {
-                    if (config.logEnabled)
-                    {
-                        v2rayConfig.log.loglevel = config.loglevel;
-                    }
-                    else
-                    {
-                        v2rayConfig.log.loglevel = config.loglevel;
-                        v2rayConfig.log.access = "";
-                        v2rayConfig.log.error = "";
-                    }
+                    v2rayConfig.log.access = Utils.GetPath(v2rayConfig.log.access);
+                    v2rayConfig.log.error = Utils.GetPath(v2rayConfig.log.error);
                 }
                 else
                 {
-                    if (config.logEnabled)
-                    {
-                        v2rayConfig.log.loglevel = config.loglevel;
-                        v2rayConfig.log.access = Utils.GetPath(v2rayConfig.log.access);
-                        v2rayConfig.log.error = Utils.GetPath(v2rayConfig.log.error);
-                    }
-                    else
-                    {
-                        v2rayConfig.log.loglevel = config.loglevel;
-                        v2rayConfig.log.access = "";
-                        v2rayConfig.log.error = "";
-                    }
+                    v2rayConfig.log.access = "";
+                    v2rayConfig.log.error = "";
                 }
             }
             catch

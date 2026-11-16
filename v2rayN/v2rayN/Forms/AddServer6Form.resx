@@ -316,7 +316,7 @@
     <value>True</value>
   </data>
   <data name="label13.Location" type="System.Drawing.Point, System.Drawing">
-    <value>428, 124</value>
+    <value>328, 124</value>
   </data>
   <data name="label13.Size" type="System.Drawing.Size, System.Drawing">
     <value>113, 12</value>
@@ -343,7 +343,7 @@
     <value>127, 121</value>
   </data>
   <data name="txtRemarks.Size" type="System.Drawing.Size, System.Drawing">
-    <value>265, 21</value>
+    <value>165, 21</value>
   </data>
   <data name="txtRemarks.TabIndex" type="System.Int32, mscorlib">
     <value>11</value>
@@ -727,7 +727,7 @@
     <value>127, 254</value>
   </data>
     <data name="txtPath.Size" type="System.Drawing.Size, System.Drawing">
-    <value>359, 21</value>
+    <value>259, 21</value>
   </data>
     <data name="txtPath.TabIndex" type="System.Int32, mscorlib">
     <value>37</value>

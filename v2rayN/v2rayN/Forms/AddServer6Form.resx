@@ -149,7 +149,7 @@
     <value>NoControl</value>
   </data>
   <data name="label21.Location" type="System.Drawing.Point, System.Drawing">
-    <value>224, 354</value>
+    <value>224, 290</value>
   </data>
   <data name="label21.Size" type="System.Drawing.Size, System.Drawing">
     <value>83, 12</value>
@@ -182,7 +182,7 @@
     <value>false</value>
   </data>
   <data name="cmbAllowInsecure.Location" type="System.Drawing.Point, System.Drawing">
-    <value>406, 350</value>
+    <value>406, 286</value>
   </data>
   <data name="cmbAllowInsecure.Size" type="System.Drawing.Size, System.Drawing">
     <value>80, 20</value>

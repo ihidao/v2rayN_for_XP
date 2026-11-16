@@ -1366,6 +1366,30 @@ namespace v2rayN.Forms
             }
         }
 
+        private bool IsApiInboundRoute(string text)
+        {
+            int routeStart = text.IndexOf('[', StringComparison.Ordinal);
+            while (routeStart >= 0)
+            {
+                if (routeStart + 4 <= text.Length
+                    && String.Compare(text, routeStart + 1, "api", 0, 3, StringComparison.OrdinalIgnoreCase) == 0)
+                {
+                    int boundary = routeStart + 4;
+                    if (boundary >= text.Length
+                        || text[boundary] == ']'
+                        || Char.IsWhiteSpace(text[boundary])
+                        || text[boundary] == '-')
+                    {
+                        return true;
+                    }
+                }
+
+                routeStart = text.IndexOf('[', routeStart + 1);
+            }
+
+            return false;
+        }
+
         private bool ShouldDisplayAccessLog(string text)
         {
             if (String.IsNullOrEmpty(text))
@@ -1373,18 +1397,23 @@ namespace v2rayN.Forms
                 return true;
             }
 
-            bool isApi = text.IndexOf("[api]", StringComparison.OrdinalIgnoreCase) >= 0;
-            bool isProxy = text.IndexOf("[proxy]", StringComparison.OrdinalIgnoreCase) >= 0;
             bool isConnectionRecord =
                 text.IndexOf(" accepted ", StringComparison.OrdinalIgnoreCase) >= 0
                 || text.IndexOf(" rejected ", StringComparison.OrdinalIgnoreCase) >= 0
                 || text.StartsWith("accepted ", StringComparison.OrdinalIgnoreCase)
                 || text.StartsWith("rejected ", StringComparison.OrdinalIgnoreCase);
 
-            if (!isConnectionRecord || (!isApi && !isProxy))
+            if (!isConnectionRecord)
             {
                 return true;
             }
+
+            // V2Ray commonly writes "[api]", while Xray may write the route
+            // as "[api -> api]". Match the inbound route tag, not only the
+            // exact V2Ray marker. Other accepted/rejected records are proxy
+            // access records for the Info-level display policy.
+            bool isApi = IsApiInboundRoute(text);
+            bool isProxy = !isApi;
 
             if (String.Equals(config.loglevel, "debug", StringComparison.OrdinalIgnoreCase))
             {

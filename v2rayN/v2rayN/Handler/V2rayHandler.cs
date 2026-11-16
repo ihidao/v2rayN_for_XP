@@ -671,7 +671,7 @@ namespace v2rayN.Handler
             return string.Empty;
         }
 
-        // Wait for the core's own startup message, then briefly verify the SOCKS listener.
+        // Verify the configured SOCKS listener before accepting the core as started.
         // Both output streams are consumed asynchronously to avoid pipe deadlocks.
         private Process TryStartCore(string fileName, string arguments, List<int> ports, bool checkUdp,
             out string failure, out long startupElapsedMs, out string coreNameVersion)

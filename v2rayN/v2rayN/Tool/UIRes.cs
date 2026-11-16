@@ -93,7 +93,11 @@ namespace v2rayN
             { "GeoDownloadFailedAllMethods", new[] { "Geo file download failed using both the proxy and direct connection: ", "Geo 文件下载失败（代理和直连均未成功）：" } },
             { "AlreadyRunning", new[] { "v2rayN is already running", "v2rayN已经运行" } },
             { "DefaultGlobal", new[] { "Global (Global)", "全局(Global)" } },
-            { "DefaultBypass", new[] { "Bypass Mainland (Whitelist)", "绕过大陆(Whitelist)" } }
+            { "DefaultBypass", new[] { "Bypass Mainland (Whitelist)", "绕过大陆(Whitelist)" } },
+            { "CoreTypeV2Ray5OrAbove", new[] { "v2ray_core (5.0 and later)", "v2ray_core (5.0及以上)" } },
+            { "CoreTypeV2RayBelow5", new[] { "v2ray_core (below 5.0)", "v2ray_core (5.0以下)" } },
+            { "CoreTypeXray1OrAbove", new[] { "xray_core (1.0 and later)", "xray_core (1.0及以上)" } },
+            { "CoreTypeXrayBelow1", new[] { "xray_core (below 1.0)", "xray_core (1.0以下)" } }
         };
 
         public static string I18N(string key)

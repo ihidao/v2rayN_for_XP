@@ -21,6 +21,10 @@ namespace v2rayN.Forms
         public OptionSettingForm()
         {
             InitializeComponent();
+
+            // Keep all four core type labels fully visible in the selection box.
+            cmbCoreType.Width = 260;
+            cmbCoreType.DropDownWidth = 260;
         }
 
         private void OptionSettingForm_Load(object sender, EventArgs e)

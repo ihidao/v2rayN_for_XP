@@ -252,6 +252,7 @@
   </data>
     <data name="txtPath.Size" type="System.Drawing.Size, System.Drawing">
     <value>259, 21</value>
+  </data>
     <data name="txtPath.TabIndex" type="System.Int32, mscorlib">
     <value>37</value>
   </data>

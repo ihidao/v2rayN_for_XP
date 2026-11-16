@@ -1344,7 +1344,7 @@ namespace v2rayN.Forms
         {
             if (this.txtMsgBox.InvokeRequired)
             {
-                Invoke(new AppendTextDelegate(AppendText), new object[] { text });
+                BeginInvoke(new AppendTextDelegate(AppendText), new object[] { text });
             }
             else
             {
@@ -1355,108 +1355,8 @@ namespace v2rayN.Forms
                         return;
                     }
                 }
-
-                // 将 v2rayN 自身提示统一成与内核相同的“日期 时间 [等级] 内容”格式；
-                // 已带时间戳的内核日志和真连接测速日志保持原样。
-                string[] lines = text.Replace("\r\n", "\n").Split('\n');
-                StringBuilder visibleText = new StringBuilder();
-                bool hasVisibleLine = false;
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    if (config != null && config.showAccessLogs == false
-                        && IsAccessLogLine(lines[i]))
-                        continue;
-
-                    string displayLine = FormatLogLine(lines[i]);
-                    if (String.IsNullOrEmpty(displayLine)
-                        || !ShouldShowLogLevelLine(displayLine))
-                        continue;
-
-                    if (hasVisibleLine)
-                        visibleText.Append(Environment.NewLine);
-                    visibleText.Append(displayLine);
-                    hasVisibleLine = true;
-                }
-                if (visibleText.Length > 0)
-                    ShowMsg(visibleText.ToString());
+                ShowMsg(text);
             }
-        }
-
-        /// <summary>
-        /// 统一日志显示格式：yyyy/MM/dd HH:mm:ss [Info|Warning|Error] 内容。
-        /// 核心原生时间戳及真连接测速的 [HH:mm:ss] 格式不重复添加时间。
-        /// </summary>
-        private string FormatLogLine(string line)
-        {
-            // 保留 v2rayN 原始提示和内核原生输出，不额外添加时间戳或日志等级。
-            // 真连接测速日志也保持测速模块自身生成的格式。
-            return line;
-        }
-
-        /// <summary>
-        /// Identify V2Ray access log records. This filter is independent of loglevel.
-        /// </summary>
-        private bool IsAccessLogLine(string line)
-        {
-            if (String.IsNullOrEmpty(line))
-                return false;
-
-            return Regex.IsMatch(line,
-                @"^\d{4}/\d{2}/\d{2} \d{2}:\d{2}:\d{2} .*\b(accepted|rejected)\b",
-                RegexOptions.IgnoreCase);
-        }
-
-        /// <summary>
-        /// 按设置的日志等级过滤统一格式化后的日志；GUI 操作提示按内容区分 Info、Warning 和 Error 等级。
-        /// </summary>
-        private bool ShouldShowLogLevelLine(string line)
-        {
-            if (String.IsNullOrEmpty(line) || config == null)
-                return true;
-
-            string value = line.ToLowerInvariant();
-            int lineLevel = -1;
-            if (value.IndexOf("[debug]", StringComparison.Ordinal) >= 0)
-                lineLevel = 0;
-            else if (value.IndexOf("[info]", StringComparison.Ordinal) >= 0)
-                lineLevel = 1;
-            else if (value.IndexOf("[warning]", StringComparison.Ordinal) >= 0
-                || value.IndexOf("[warn]", StringComparison.Ordinal) >= 0)
-                lineLevel = 2;
-            else if (value.IndexOf("[error]", StringComparison.Ordinal) >= 0)
-                lineLevel = 3;
-            else if (value.IndexOf("[fatal]", StringComparison.Ordinal) >= 0
-                || value.IndexOf("panic:", StringComparison.Ordinal) >= 0)
-                lineLevel = 4;
-
-            // 不认识的格式（包括 v2rayN 自身提示）保持显示。
-            if (lineLevel < 0)
-                return true;
-
-            string configuredLevel = (config.loglevel ?? "warning").ToLowerInvariant();
-            int minimumLevel;
-            switch (configuredLevel)
-            {
-                case "debug":
-                    minimumLevel = 0;
-                    break;
-                case "info":
-                    minimumLevel = 1;
-                    break;
-                case "warning":
-                case "warn":
-                    minimumLevel = 2;
-                    break;
-                case "error":
-                    minimumLevel = 3;
-                    break;
-                case "none":
-                    return false;
-                default:
-                    minimumLevel = 1;
-                    break;
-            }
-            return lineLevel >= minimumLevel;
         }
 
         /// <summary>

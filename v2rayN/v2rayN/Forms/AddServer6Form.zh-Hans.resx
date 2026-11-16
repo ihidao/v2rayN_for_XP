@@ -176,4 +176,88 @@
   <data name="$this.Text" xml:space="preserve">
     <value>编辑或添加[Trojan]服务器</value>
   </data>
+  <data name="label7.Text" xml:space="preserve">
+    <value>传输协议(network)</value>
+  </data>
+  <data name="cmbNetwork.Location" xml:space="preserve">
+    <value>127, 220</value>
+  </data>
+  <data name="cmbNetwork.Size" xml:space="preserve">
+    <value>220, 20</value>
+  </data>
+  <data name="cmbNetwork.TabIndex" xml:space="preserve">
+    <value>34</value>
+  </data>
+  <data name="cmbNetwork.Items" xml:space="preserve">
+    <value>tcp</value>
+  </data>
+  <data name="cmbNetwork.Items1" xml:space="preserve">
+    <value>kcp</value>
+  </data>
+  <data name="cmbNetwork.Items2" xml:space="preserve">
+    <value>ws</value>
+  </data>
+  <data name="cmbNetwork.Items3" xml:space="preserve">
+    <value>h2</value>
+  </data>
+  <data name="cmbNetwork.Items4" xml:space="preserve">
+    <value>quic</value>
+  </data>
+  <data name="cmbNetwork.Items5" xml:space="preserve">
+    <value>grpc</value>
+  </data>
+  <data name="label10.Text" xml:space="preserve">
+    <value>伪装类型(type)</value>
+  </data>
+  <data name="label10.Location" xml:space="preserve">
+    <value>12, 254</value>
+  </data>
+  <data name="label10.Size" xml:space="preserve">
+    <value>89, 12</value>
+  </data>
+  <data name="cmbHeaderType.Location" xml:space="preserve">
+    <value>127, 250</value>
+  </data>
+  <data name="cmbHeaderType.Size" xml:space="preserve">
+    <value>220, 20</value>
+  </data>
+  <data name="cmbHeaderType.TabIndex" xml:space="preserve">
+    <value>35</value>
+  </data>
+  <data name="label11.Text" xml:space="preserve">
+    <value>伪装域名(host)</value>
+  </data>
+  <data name="label11.Location" xml:space="preserve">
+    <value>12, 286</value>
+  </data>
+  <data name="label11.Size" xml:space="preserve">
+    <value>89, 12</value>
+  </data>
+  <data name="txtRequestHost.Location" xml:space="preserve">
+    <value>127, 282</value>
+  </data>
+  <data name="txtRequestHost.Size" xml:space="preserve">
+    <value>359, 21</value>
+  </data>
+  <data name="txtRequestHost.TabIndex" xml:space="preserve">
+    <value>36</value>
+  </data>
+  <data name="label12.Text" xml:space="preserve">
+    <value>路径(path)</value>
+  </data>
+  <data name="label12.Location" xml:space="preserve">
+    <value>12, 318</value>
+  </data>
+  <data name="label12.Size" xml:space="preserve">
+    <value>65, 12</value>
+  </data>
+  <data name="txtPath.Location" xml:space="preserve">
+    <value>127, 314</value>
+  </data>
+  <data name="txtPath.Size" xml:space="preserve">
+    <value>359, 21</value>
+  </data>
+  <data name="txtPath.TabIndex" xml:space="preserve">
+    <value>37</value>
+  </data>
 </root>

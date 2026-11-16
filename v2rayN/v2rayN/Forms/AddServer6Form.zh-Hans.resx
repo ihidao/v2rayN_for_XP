@@ -128,7 +128,7 @@
     <value>跳过证书验证(allowInsecure)</value>
   </data>
   <data name="cmbAllowInsecure.Location" type="System.Drawing.Point, System.Drawing">
-    <value>406, 185</value>
+    <value>406, 350</value>
   </data>
   <data name="label15.Size" type="System.Drawing.Size, System.Drawing">
     <value>107, 12</value>
@@ -180,7 +180,7 @@
     <value>传输协议(network)</value>
   </data>
     <data name="cmbNetwork.Location" type="System.Drawing.Point, System.Drawing">
-    <value>127, 220</value>
+    <value>127, 160</value>
   </data>
     <data name="cmbNetwork.Size" type="System.Drawing.Size, System.Drawing">
     <value>220, 20</value>
@@ -210,13 +210,13 @@
     <value>伪装类型(type)</value>
   </data>
     <data name="label10.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 254</value>
+    <value>12, 194</value>
   </data>
     <data name="label10.Size" type="System.Drawing.Size, System.Drawing">
     <value>89, 12</value>
   </data>
     <data name="cmbHeaderType.Location" type="System.Drawing.Point, System.Drawing">
-    <value>127, 250</value>
+    <value>127, 190</value>
   </data>
     <data name="cmbHeaderType.Size" type="System.Drawing.Size, System.Drawing">
     <value>220, 20</value>
@@ -228,13 +228,13 @@
     <value>伪装域名(host)</value>
   </data>
     <data name="label11.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 286</value>
+    <value>12, 226</value>
   </data>
     <data name="label11.Size" type="System.Drawing.Size, System.Drawing">
     <value>89, 12</value>
   </data>
     <data name="txtRequestHost.Location" type="System.Drawing.Point, System.Drawing">
-    <value>127, 282</value>
+    <value>127, 222</value>
   </data>
     <data name="txtRequestHost.Size" type="System.Drawing.Size, System.Drawing">
     <value>359, 21</value>
@@ -246,13 +246,13 @@
     <value>路径(path)</value>
   </data>
     <data name="label12.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 318</value>
+    <value>12, 258</value>
   </data>
     <data name="label12.Size" type="System.Drawing.Size, System.Drawing">
     <value>65, 12</value>
   </data>
     <data name="txtPath.Location" type="System.Drawing.Point, System.Drawing">
-    <value>127, 314</value>
+    <value>127, 254</value>
   </data>
     <data name="txtPath.Size" type="System.Drawing.Size, System.Drawing">
     <value>359, 21</value>
@@ -261,13 +261,13 @@
     <value>37</value>
   </data>
   <data name="groupBox1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>547, 360</value>
+    <value>547, 400</value>
   </data>
   <data name="$this.Size" type="System.Drawing.Size, System.Drawing">
     <value>547, 430</value>
   </data>
   <data name="label7.Location" type="System.Drawing.Point, System.Drawing">
-    <value>12, 224</value>
+    <value>12, 164</value>
   </data>
   <data name="label7.Size" type="System.Drawing.Size, System.Drawing">
     <value>107, 12</value>
@@ -276,8 +276,14 @@
     <value>38</value>
   </data>
   <data name="chkMux.AutoSize" type="System.Boolean, mscorlib"><value>True</value></data>
-  <data name="chkMux.Location" type="System.Drawing.Point, System.Drawing"><value>405, 220</value></data>
+  <data name="chkMux.Location" type="System.Drawing.Point, System.Drawing"><value>405, 160</value></data>
   <data name="chkMux.Size" type="System.Drawing.Size, System.Drawing"><value>55, 16</value></data>
   <data name="chkMux.TabIndex" type="System.Int32, mscorlib"><value>39</value></data>
   <data name="chkMux.Text" xml:space="preserve"><value>启用Mux</value></data>
+  <data name="label15.Location" type="System.Drawing.Point, System.Drawing"><value>12, 290</value></data>
+  <data name="cmbStreamSecurity.Location" type="System.Drawing.Point, System.Drawing"><value>127, 286</value></data>
+  <data name="label4.Location" type="System.Drawing.Point, System.Drawing"><value>12, 322</value></data>
+  <data name="txtSNI.Location" type="System.Drawing.Point, System.Drawing"><value>127, 318</value></data>
+  <data name="label21.Location" type="System.Drawing.Point, System.Drawing"><value>224, 354</value></data>
+  <data name="$this.ClientSize" type="System.Drawing.Point, System.Drawing"><value>547, 470</value></data>
 </root>

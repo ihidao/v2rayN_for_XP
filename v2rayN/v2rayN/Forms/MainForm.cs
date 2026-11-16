@@ -1368,7 +1368,7 @@ namespace v2rayN.Forms
 
         private bool IsApiInboundRoute(string text)
         {
-            int routeStart = text.IndexOf('[', StringComparison.Ordinal);
+            int routeStart = text.IndexOf("[", StringComparison.Ordinal);
             while (routeStart >= 0)
             {
                 if (routeStart + 4 <= text.Length
@@ -1384,7 +1384,7 @@ namespace v2rayN.Forms
                     }
                 }
 
-                routeStart = text.IndexOf('[', routeStart + 1);
+                routeStart = text.IndexOf("[", routeStart + 1, StringComparison.Ordinal);
             }
 
             return false;

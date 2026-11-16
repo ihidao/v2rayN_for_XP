@@ -139,10 +139,10 @@ namespace v2rayN.Forms
             cmbCoreType.Items.Clear();
             cmbCoreType.Items.AddRange(new object[]
             {
-                "v2ray_core (5.0及以上)",
-                "v2ray_core (5.0以下)",
-                "xray_core (1.0及以上)",
-                "xray_core (1.0以下)"
+                UIRes.I18N("CoreTypeV2Ray5OrAbove"),
+                UIRes.I18N("CoreTypeV2RayBelow5"),
+                UIRes.I18N("CoreTypeXray1OrAbove"),
+                UIRes.I18N("CoreTypeXrayBelow1")
             });
             int coreTypeIndex = Array.IndexOf(CoreTypeOrder, config.coreType);
             cmbCoreType.SelectedIndex = coreTypeIndex >= 0 ? coreTypeIndex : 0;

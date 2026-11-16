@@ -10,6 +10,14 @@ namespace v2rayN.Forms
 {
     public partial class OptionSettingForm : BaseForm
     {
+        private static readonly ECoreType[] CoreTypeOrder = new ECoreType[]
+        {
+            ECoreType.v2ray_core_5_or_above,
+            ECoreType.v2ray_core_below_5,
+            ECoreType.xray_core_1_or_above,
+            ECoreType.xray_core_below_1
+        };
+
         public OptionSettingForm()
         {
             InitializeComponent();
@@ -31,7 +39,8 @@ namespace v2rayN.Forms
         {
             //日志
             chklogEnabled.Checked = config.logEnabled;
-            chkShowAccessLogs.Checked = config.showAccessLogs != false;
+            // This was not part of the original v2rayN logging UI.
+            chkShowAccessLogs.Visible = false;
             cmbloglevel.Text = config.loglevel;
 
             //Mux
@@ -123,7 +132,16 @@ namespace v2rayN.Forms
             }
 
             chkIgnoreGeoUpdateCore.Checked = config.ignoreGeoUpdateCore;
-            cmbCoreType.SelectedIndex = (int)config.coreType;
+            cmbCoreType.Items.Clear();
+            cmbCoreType.Items.AddRange(new object[]
+            {
+                "v2ray_core (5.0及以上)",
+                "v2ray_core (5.0以下)",
+                "xray_core (1.0及以上)",
+                "xray_core (1.0以下)"
+            });
+            int coreTypeIndex = Array.IndexOf(CoreTypeOrder, config.coreType);
+            cmbCoreType.SelectedIndex = coreTypeIndex >= 0 ? coreTypeIndex : 0;
         }
         private void btnOK_Click(object sender, EventArgs e)
         {
@@ -161,7 +179,6 @@ namespace v2rayN.Forms
         {
             //日志
             bool logEnabled = chklogEnabled.Checked;
-            bool showAccessLogs = chkShowAccessLogs.Checked;
             string loglevel = cmbloglevel.Text.TrimEx();
 
             //Mux
@@ -223,7 +240,6 @@ namespace v2rayN.Forms
 
             //日志     
             config.logEnabled = logEnabled;
-            config.showAccessLogs = showAccessLogs;
             config.loglevel = loglevel;
 
             //Mux
@@ -292,7 +308,9 @@ namespace v2rayN.Forms
             config.keepOlderDedupl = chkKeepOlderDedupl.Checked;
 
             config.ignoreGeoUpdateCore = chkIgnoreGeoUpdateCore.Checked;
-            config.coreType = (ECoreType)cmbCoreType.SelectedIndex;
+            if (cmbCoreType.SelectedIndex < 0 || cmbCoreType.SelectedIndex >= CoreTypeOrder.Length)
+                return -1;
+            config.coreType = CoreTypeOrder[cmbCoreType.SelectedIndex];
 
             return 0;
         }

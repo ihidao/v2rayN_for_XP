@@ -526,9 +526,14 @@ namespace v2rayN.Handler
                     serversItem.ota = false;
                     serversItem.level = 1;
 
-                    outbound.mux.enabled = false;
-                    outbound.mux.concurrency = -1;
-
+                    bool muxEnabled = config.muxEnabled;
+                    if (config.index >= 0 && config.index < config.vmess.Count
+                        && config.vmess[config.index].muxEnabled.HasValue)
+                    {
+                        muxEnabled = config.vmess[config.index].muxEnabled.Value;
+                    }
+                    outbound.mux.enabled = muxEnabled;
+                    outbound.mux.concurrency = muxEnabled ? 8 : -1;
 
                     //远程服务器底层传输配置
                     StreamSettings streamSettings = outbound.streamSettings;

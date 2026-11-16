@@ -22,13 +22,16 @@ namespace v2rayN.Forms
         {
             InitializeComponent();
 
-            // Keep all four core type labels fully visible in the selection box.
-            cmbCoreType.Width = 260;
-            cmbCoreType.DropDownWidth = 260;
+            // Keep the core type selector compact while retaining a usable drop-down.
+            cmbCoreType.Width = 180;
+            cmbCoreType.DropDownWidth = 180;
         }
 
         private void OptionSettingForm_Load(object sender, EventArgs e)
         {
+            // Keep custom UI strings synchronized with the active application language.
+            UIRes.SetCulture(System.Threading.Thread.CurrentThread.CurrentUICulture.Name);
+
             InitBase();
 
             InitKCP();

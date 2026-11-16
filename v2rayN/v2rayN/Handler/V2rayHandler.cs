@@ -749,7 +749,8 @@ namespace v2rayN.Handler
                 if (String.IsNullOrEmpty(e.Data)) return;
                 SaveCoreLog(e.Data);
                 lock (errorText) errorText.AppendLine(e.Data);
-                // Drain stderr asynchronously; captured text is included on startup failure.
+                // Keep stderr visible as well as available for startup failure diagnostics.
+                ShowMsg(false, e.Data + Environment.NewLine);
             };
             p.OutputDataReceived += outputHandler;
             p.ErrorDataReceived += errorHandler;

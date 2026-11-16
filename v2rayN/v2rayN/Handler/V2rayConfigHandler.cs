@@ -109,18 +109,24 @@ namespace v2rayN.Handler
                     else
                     {
                         v2rayConfig.log.loglevel = config.loglevel;
-                        v2rayConfig.log.access = "none";
+                        v2rayConfig.log.access = "";
                         v2rayConfig.log.error = "";
                     }
                 }
                 else
                 {
-                    // Always send core logs to stdout/stderr so v2rayN can display
-                    // them in its main window. The save-log checkbox only controls
-                    // whether V2rayHandler additionally writes these streams to files.
-                    v2rayConfig.log.loglevel = config.loglevel;
-                    v2rayConfig.log.access = "";
-                    v2rayConfig.log.error = "";
+                    if (config.logEnabled)
+                    {
+                        v2rayConfig.log.loglevel = config.loglevel;
+                        v2rayConfig.log.access = Utils.GetPath(v2rayConfig.log.access);
+                        v2rayConfig.log.error = Utils.GetPath(v2rayConfig.log.error);
+                    }
+                    else
+                    {
+                        v2rayConfig.log.loglevel = config.loglevel;
+                        v2rayConfig.log.access = "";
+                        v2rayConfig.log.error = "";
+                    }
                 }
             }
             catch

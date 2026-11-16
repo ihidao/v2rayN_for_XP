@@ -643,13 +643,13 @@
     <value>v2rayN.Forms.BaseServerForm, v2rayN, Version=0.0.0.0, Culture=neutral, PublicKeyToken=null</value>
   </data>
     <data name="label7.Text" xml:space="preserve">
-    <value>Transport (network)</value>
+    <value>Transport protocol (network)</value>
   </data>
     <data name="cmbNetwork.Location" type="System.Drawing.Point, System.Drawing">
-    <value>127, 160</value>
+    <value>160, 160</value>
   </data>
     <data name="cmbNetwork.Size" type="System.Drawing.Size, System.Drawing">
-    <value>220, 20</value>
+    <value>195, 20</value>
   </data>
     <data name="cmbNetwork.TabIndex" type="System.Int32, mscorlib">
     <value>34</value>
@@ -731,7 +731,7 @@
     <value>12, 164</value>
   </data>
   <data name="label7.Size" type="System.Drawing.Size, System.Drawing">
-    <value>107, 12</value>
+    <value>140, 12</value>
   </data>
   <data name="label7.TabIndex" type="System.Int32, mscorlib">
     <value>38</value>

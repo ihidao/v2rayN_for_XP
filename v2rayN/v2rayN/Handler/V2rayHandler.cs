@@ -22,6 +22,8 @@ namespace v2rayN.Handler
         private List<int> readinessPorts = new List<int>();
         private List<int> readinessUdpPorts = new List<int>();
         private ECoreType _coreType = ECoreType.v2ray_core_5_or_above;
+        private bool _saveCoreLogs;
+        private static readonly object CoreLogSync = new object();
 
         /// <summary>
         /// True only while the process launched by this handler is still alive.
@@ -49,6 +51,7 @@ namespace v2rayN.Handler
         public void LoadV2ray(Config config, bool reloadConfig)
         {
             _coreType = config == null ? ECoreType.v2ray_core_5_or_above : config.coreType;
+            _saveCoreLogs = config != null && config.logEnabled;
             readinessPorts = new List<int>();
             readinessUdpPorts = new List<int>();
             if (config.inbound != null)
@@ -671,6 +674,35 @@ namespace v2rayN.Handler
             return string.Empty;
         }
 
+        // Save raw core output independently from the UI log filters.
+        // A shared lock keeps stdout/stderr lines from being written concurrently.
+        private void SaveCoreLog(string line)
+        {
+            if (!_saveCoreLogs || String.IsNullOrEmpty(line))
+                return;
+
+            try
+            {
+                lock (CoreLogSync)
+                {
+                    string directory = Path.Combine(Utils.StartupPath(), "coreLogs");
+                    if (!Directory.Exists(directory))
+                        Directory.CreateDirectory(directory);
+
+                    string fileName = DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    string filePath = Path.Combine(directory, fileName);
+                    using (StreamWriter writer = new StreamWriter(filePath, true, new UTF8Encoding(false)))
+                    {
+                        writer.WriteLine(line);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.SaveLog("Unable to save core log: " + ex.Message);
+            }
+        }
+
         // Verify the configured SOCKS listener before accepting the core as started.
         // Both output streams are consumed asynchronously to avoid pipe deadlocks.
         private Process TryStartCore(string fileName, string arguments, List<int> ports, bool checkUdp,
@@ -708,13 +740,14 @@ namespace v2rayN.Handler
                     if (parts.Length >= 2)
                         detectedCoreNameVersion = parts[0] + " " + parts[1];
                 }
-                // Original v2rayN behavior: display stdout unchanged.
-                // The core itself handles native access/error file output.
+                // Save before UI filtering; the UI display path remains unchanged.
+                SaveCoreLog(e.Data);
                 ShowMsg(false, e.Data + Environment.NewLine);
             };
             DataReceivedEventHandler errorHandler = (sender, e) =>
             {
                 if (String.IsNullOrEmpty(e.Data)) return;
+                SaveCoreLog(e.Data);
                 lock (errorText) errorText.AppendLine(e.Data);
                 // Drain stderr asynchronously; captured text is included on startup failure.
             };

@@ -102,16 +102,30 @@ namespace v2rayN.Handler
             {
                 v2rayConfig.log.loglevel = config.loglevel;
 
-                // During normal operation, keep core output on stdout/stderr so
-                // v2rayN can display it and optionally save the same output.
-                // Exported configurations retain the original native file paths.
-                if (blExport && config.logEnabled)
+                if (config.logEnabled)
                 {
-                    v2rayConfig.log.access = Utils.GetPath(v2rayConfig.log.access);
-                    v2rayConfig.log.error = Utils.GetPath(v2rayConfig.log.error);
+                    if (blExport)
+                    {
+                        // Exported configurations retain the original sample paths.
+                        v2rayConfig.log.access = Utils.GetPath(v2rayConfig.log.access);
+                        v2rayConfig.log.error = Utils.GetPath(v2rayConfig.log.error);
+                    }
+                    else
+                    {
+                        // Let the core write access and runtime logs directly.
+                        // Keep one file per category and local calendar date.
+                        string logDirectory = Path.Combine(Utils.StartupPath(), "coreLogs");
+                        if (!Directory.Exists(logDirectory))
+                            Directory.CreateDirectory(logDirectory);
+
+                        string date = DateTime.Now.ToString("yyyyMMdd");
+                        v2rayConfig.log.access = Path.Combine(logDirectory, date + "_access.log");
+                        v2rayConfig.log.error = Path.Combine(logDirectory, date + "_error.log");
+                    }
                 }
                 else
                 {
+                    // Empty paths keep the core's normal stdout output behavior.
                     v2rayConfig.log.access = "";
                     v2rayConfig.log.error = "";
                 }

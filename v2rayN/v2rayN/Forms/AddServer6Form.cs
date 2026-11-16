@@ -36,7 +36,7 @@ namespace v2rayN.Forms
             txtPort.Text = vmessItem.port.ToString();
             txtId.Text = vmessItem.id;
             txtSNI.Text = vmessItem.sni;
-            cmbNetwork.Text = vmessItem.network;
+            cmbNetwork.Text = Utils.IsNullOrEmpty(vmessItem.network) ? Global.DefaultNetwork : vmessItem.network;
             cmbHeaderType.Text = vmessItem.headerType;
             txtRequestHost.Text = vmessItem.requestHost;
             txtPath.Text = vmessItem.path;
@@ -72,7 +72,7 @@ namespace v2rayN.Forms
         private void SetHeaderType()
         {
             cmbHeaderType.Items.Clear();
-            string network = cmbNetwork.Text;
+            string network = Utils.IsNullOrEmpty(cmbNetwork.Text) ? Global.DefaultNetwork : cmbNetwork.Text;
             if (Utils.IsNullOrEmpty(network))
             {
                 cmbHeaderType.Items.Add(Global.None);

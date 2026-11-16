@@ -128,7 +128,7 @@
     <value>跳过证书验证(allowInsecure)</value>
   </data>
   <data name="cmbAllowInsecure.Location" type="System.Drawing.Point, System.Drawing">
-    <value>406, 350</value>
+    <value>406, 286</value>
   </data>
   <data name="label15.Size" type="System.Drawing.Size, System.Drawing">
     <value>107, 12</value>
@@ -276,7 +276,7 @@
   <data name="cmbStreamSecurity.Location" type="System.Drawing.Point, System.Drawing"><value>127, 286</value></data>
   <data name="label4.Location" type="System.Drawing.Point, System.Drawing"><value>12, 322</value></data>
   <data name="txtSNI.Location" type="System.Drawing.Point, System.Drawing"><value>127, 318</value></data>
-  <data name="label21.Location" type="System.Drawing.Point, System.Drawing"><value>224, 354</value></data>
+  <data name="label21.Location" type="System.Drawing.Point, System.Drawing"><value>224, 290</value></data>
   <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing"><value>547, 470</value></data>
   <data name="txtRemarks.Size" type="System.Drawing.Size, System.Drawing"><value>165, 21</value></data>
   <data name="label13.Location" type="System.Drawing.Point, System.Drawing"><value>328, 124</value></data>

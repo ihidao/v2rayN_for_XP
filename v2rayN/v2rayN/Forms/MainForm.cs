@@ -1348,10 +1348,9 @@ namespace v2rayN.Forms
             }
             else
             {
-                // API access records are shown only at the warning log level.
-                // Match the API marker itself so different core log formats are covered.
-                if (!String.Equals(config.loglevel, "warning", StringComparison.OrdinalIgnoreCase)
-                    && IsApiAccessLogLine(text))
+                // Access records are displayed independently from core diagnostic log levels:
+                // Debug shows API and proxy connections; Info shows proxy connections only.
+                if (!ShouldDisplayAccessLog(text))
                 {
                     return;
                 }
@@ -1367,10 +1366,38 @@ namespace v2rayN.Forms
             }
         }
 
-        private bool IsApiAccessLogLine(string text)
+        private bool ShouldDisplayAccessLog(string text)
         {
-            return !String.IsNullOrEmpty(text)
-                && text.IndexOf("[api]", StringComparison.OrdinalIgnoreCase) >= 0;
+            if (String.IsNullOrEmpty(text))
+            {
+                return true;
+            }
+
+            bool isApi = text.IndexOf("[api]", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isProxy = text.IndexOf("[proxy]", StringComparison.OrdinalIgnoreCase) >= 0;
+            bool isConnectionRecord =
+                text.IndexOf(" accepted ", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.IndexOf(" rejected ", StringComparison.OrdinalIgnoreCase) >= 0
+                || text.StartsWith("accepted ", StringComparison.OrdinalIgnoreCase)
+                || text.StartsWith("rejected ", StringComparison.OrdinalIgnoreCase);
+
+            if (!isConnectionRecord || (!isApi && !isProxy))
+            {
+                return true;
+            }
+
+            if (String.Equals(config.loglevel, "debug", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            if (String.Equals(config.loglevel, "info", StringComparison.OrdinalIgnoreCase))
+            {
+                return isProxy;
+            }
+
+            // Warning, Error and None do not display connection access records.
+            return false;
         }
 
         /// <summary>

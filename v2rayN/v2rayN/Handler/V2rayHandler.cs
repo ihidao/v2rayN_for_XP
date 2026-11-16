@@ -675,8 +675,8 @@ namespace v2rayN.Handler
         }
 
         // Save raw core output independently from the UI log filters.
-        // A shared lock keeps stdout/stderr lines from being written concurrently.
-        private void SaveCoreLog(string line)
+        // stdout and stderr are archived separately by date and category.
+        private void SaveCoreLog(string line, string category)
         {
             if (!_saveCoreLogs || String.IsNullOrEmpty(line))
                 return;
@@ -689,7 +689,7 @@ namespace v2rayN.Handler
                     if (!Directory.Exists(directory))
                         Directory.CreateDirectory(directory);
 
-                    string fileName = DateTime.Now.ToString("yyyyMMdd") + ".log";
+                    string fileName = DateTime.Now.ToString("yyyyMMdd") + "_" + category + ".log";
                     string filePath = Path.Combine(directory, fileName);
                     using (StreamWriter writer = new StreamWriter(filePath, true, new UTF8Encoding(false)))
                     {
@@ -741,13 +741,13 @@ namespace v2rayN.Handler
                         detectedCoreNameVersion = parts[0] + " " + parts[1];
                 }
                 // Save before UI filtering; the UI display path remains unchanged.
-                SaveCoreLog(e.Data);
+                SaveCoreLog(e.Data, "access");
                 ShowMsg(false, e.Data + Environment.NewLine);
             };
             DataReceivedEventHandler errorHandler = (sender, e) =>
             {
                 if (String.IsNullOrEmpty(e.Data)) return;
-                SaveCoreLog(e.Data);
+                SaveCoreLog(e.Data, "error");
                 lock (errorText) errorText.AppendLine(e.Data);
                 // Keep stderr visible as well as available for startup failure diagnostics.
                 ShowMsg(false, e.Data + Environment.NewLine);

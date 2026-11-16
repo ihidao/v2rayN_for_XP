@@ -771,8 +771,8 @@ namespace v2rayN.Handler
                         ? UIRes.I18N("CoreExitedAfterStart")
                         : UIRes.I18N("CoreSocksNotReady");
 
-                    // Do not try the legacy command line until this process is
-                    // confirmed stopped; otherwise both attempts may compete for ports.
+                    // The command-line format is explicitly selected in settings.
+                    // Stop this failed process and report the error; do not try another syntax.
                     try
                     {
                         p.Kill();

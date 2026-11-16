@@ -91,8 +91,7 @@ namespace v2rayN.Handler
 
             bool isV2RayCore = config_.coreType == ECoreType.v2ray_core_5_or_above
                 || config_.coreType == ECoreType.v2ray_core_below_5;
-            bool usesModernArguments = config_.coreType == ECoreType.v2ray_core_5_or_above
-                || config_.coreType == ECoreType.xray_core_1_or_above;
+            bool usesV2Ray5Arguments = config_.coreType == ECoreType.v2ray_core_5_or_above;
             string coreName = isV2RayCore ? "v2ray.exe" : "xray.exe";
             string corePath = Utils.GetPath(coreName);
             if (!System.IO.File.Exists(corePath) && isV2RayCore)
@@ -107,8 +106,8 @@ namespace v2rayN.Handler
             ProcessStartInfo info = new ProcessStartInfo();
             info.FileName = corePath;
             string server = "--server=127.0.0.1:" + Global.statePort.ToString(CultureInfo.InvariantCulture);
-            // Modern selected cores use "stats -json"; legacy cores use "statsquery".
-            info.Arguments = usesModernArguments
+            // V2Ray 5+ uses "stats -json"; V2Ray 4.x and Xray use "statsquery".
+            info.Arguments = usesV2Ray5Arguments
                 ? "api stats -json " + server
                 : "api statsquery " + server;
             info.WorkingDirectory = Utils.StartupPath();

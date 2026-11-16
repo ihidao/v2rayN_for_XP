@@ -1348,9 +1348,9 @@ namespace v2rayN.Forms
             }
             else
             {
-                // API inbound connection records are useful only when core debug
-                // logging is enabled; keep other core output unchanged.
-                if (!String.Equals(config.loglevel, "debug", StringComparison.OrdinalIgnoreCase)
+                // API access records are shown only at the warning log level.
+                // Match the API marker itself so different core log formats are covered.
+                if (!String.Equals(config.loglevel, "warning", StringComparison.OrdinalIgnoreCase)
                     && IsApiAccessLogLine(text))
                 {
                     return;
@@ -1369,14 +1369,8 @@ namespace v2rayN.Forms
 
         private bool IsApiAccessLogLine(string text)
         {
-            if (String.IsNullOrEmpty(text)
-                || text.IndexOf("[api]", StringComparison.OrdinalIgnoreCase) < 0)
-                return false;
-
-            return text.IndexOf(" accepted ", StringComparison.OrdinalIgnoreCase) >= 0
-                || text.IndexOf(" rejected ", StringComparison.OrdinalIgnoreCase) >= 0
-                || text.StartsWith("accepted ", StringComparison.OrdinalIgnoreCase)
-                || text.StartsWith("rejected ", StringComparison.OrdinalIgnoreCase);
+            return !String.IsNullOrEmpty(text)
+                && text.IndexOf("[api]", StringComparison.OrdinalIgnoreCase) >= 0;
         }
 
         /// <summary>

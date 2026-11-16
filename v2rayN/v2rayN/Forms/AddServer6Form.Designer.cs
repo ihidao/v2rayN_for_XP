@@ -31,6 +31,7 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AddServer6Form));
             this.btnClose = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.chkMux = new System.Windows.Forms.CheckBox();
             this.label21 = new System.Windows.Forms.Label();
             this.cmbAllowInsecure = new System.Windows.Forms.ComboBox();
             this.label15 = new System.Windows.Forms.Label();
@@ -79,6 +80,7 @@
             this.groupBox1.Controls.Add(this.cmbHeaderType);
             this.groupBox1.Controls.Add(this.label7);
             this.groupBox1.Controls.Add(this.cmbNetwork);
+            this.groupBox1.Controls.Add(this.chkMux);
             this.groupBox1.Controls.Add(this.label21);
             this.groupBox1.Controls.Add(this.cmbAllowInsecure);
             this.groupBox1.Controls.Add(this.label15);
@@ -97,6 +99,12 @@
             resources.ApplyResources(this.groupBox1, "groupBox1");
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.TabStop = false;
+            // 
+            // chkMux
+            // 
+            resources.ApplyResources(this.chkMux, "chkMux");
+            this.chkMux.Name = "chkMux";
+            this.chkMux.UseVisualStyleBackColor = true;
             // 
             // label21
             // 
@@ -302,6 +310,7 @@
         private System.Windows.Forms.TextBox txtPath;
         private System.Windows.Forms.Label label15;
         private System.Windows.Forms.ComboBox cmbStreamSecurity;
+        private System.Windows.Forms.CheckBox chkMux;
         private System.Windows.Forms.Label label21;
         private System.Windows.Forms.ComboBox cmbAllowInsecure;
     }

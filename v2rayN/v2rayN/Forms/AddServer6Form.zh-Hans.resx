@@ -136,11 +136,7 @@
   <data name="label15.Text" xml:space="preserve">
     <value>底层传输安全(tls)</value>
   </data>
-  <assembly alias="mscorlib" name="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" />
-  <data name="cmbStreamSecurity.Enabled" type="System.Boolean, mscorlib">
-    <value>False</value>
-  </data>
-  <data name="label13.Text" xml:space="preserve">
+  <assembly alias="mscorlib" name="mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089" /><data name="label13.Text" xml:space="preserve">
     <value>*手填,方便识别管理</value>
   </data>
   <data name="label6.Size" type="System.Drawing.Size, System.Drawing">
@@ -286,4 +282,7 @@
   <data name="txtSNI.Location" type="System.Drawing.Point, System.Drawing"><value>127, 318</value></data>
   <data name="label21.Location" type="System.Drawing.Point, System.Drawing"><value>224, 354</value></data>
   <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing"><value>547, 470</value></data>
+  <data name="txtRemarks.Size" type="System.Drawing.Size, System.Drawing"><value>165, 21</value></data>
+  <data name="label13.Location" type="System.Drawing.Point, System.Drawing"><value>328, 124</value></data>
+  <data name="txtPath.Size" type="System.Drawing.Size, System.Drawing"><value>259, 21</value></data>
 </root>

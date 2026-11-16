@@ -37,6 +37,14 @@
             this.cmbStreamSecurity = new System.Windows.Forms.ComboBox();
             this.label4 = new System.Windows.Forms.Label();
             this.txtSNI = new System.Windows.Forms.TextBox();
+            this.label7 = new System.Windows.Forms.Label();
+            this.cmbNetwork = new System.Windows.Forms.ComboBox();
+            this.label10 = new System.Windows.Forms.Label();
+            this.cmbHeaderType = new System.Windows.Forms.ComboBox();
+            this.label11 = new System.Windows.Forms.Label();
+            this.txtRequestHost = new System.Windows.Forms.TextBox();
+            this.label12 = new System.Windows.Forms.Label();
+            this.txtPath = new System.Windows.Forms.TextBox();
             this.label13 = new System.Windows.Forms.Label();
             this.txtRemarks = new System.Windows.Forms.TextBox();
             this.label6 = new System.Windows.Forms.Label();
@@ -63,6 +71,14 @@
             // 
             // groupBox1
             // 
+            this.groupBox1.Controls.Add(this.label12);
+            this.groupBox1.Controls.Add(this.txtPath);
+            this.groupBox1.Controls.Add(this.label11);
+            this.groupBox1.Controls.Add(this.txtRequestHost);
+            this.groupBox1.Controls.Add(this.label10);
+            this.groupBox1.Controls.Add(this.cmbHeaderType);
+            this.groupBox1.Controls.Add(this.label7);
+            this.groupBox1.Controls.Add(this.cmbNetwork);
             this.groupBox1.Controls.Add(this.label21);
             this.groupBox1.Controls.Add(this.cmbAllowInsecure);
             this.groupBox1.Controls.Add(this.label15);
@@ -113,8 +129,60 @@
             resources.ApplyResources(this.cmbStreamSecurity, "cmbStreamSecurity");
             this.cmbStreamSecurity.Name = "cmbStreamSecurity";
             // 
+            // label7
+            //
+            resources.ApplyResources(this.label7, "label7");
+            this.label7.Name = "label7";
+            //
+            // cmbNetwork
+            //
+            this.cmbNetwork.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbNetwork.FormattingEnabled = true;
+            this.cmbNetwork.Items.AddRange(new object[] {
+            resources.GetString("cmbNetwork.Items"),
+            resources.GetString("cmbNetwork.Items1"),
+            resources.GetString("cmbNetwork.Items2"),
+            resources.GetString("cmbNetwork.Items3"),
+            resources.GetString("cmbNetwork.Items4"),
+            resources.GetString("cmbNetwork.Items5")});
+            resources.ApplyResources(this.cmbNetwork, "cmbNetwork");
+            this.cmbNetwork.Name = "cmbNetwork";
+            this.cmbNetwork.SelectedIndexChanged += new System.EventHandler(this.cmbNetwork_SelectedIndexChanged);
+            //
+            // label10
+            //
+            resources.ApplyResources(this.label10, "label10");
+            this.label10.Name = "label10";
+            //
+            // cmbHeaderType
+            //
+            this.cmbHeaderType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbHeaderType.FormattingEnabled = true;
+            resources.ApplyResources(this.cmbHeaderType, "cmbHeaderType");
+            this.cmbHeaderType.Name = "cmbHeaderType";
+            //
+            // label11
+            //
+            resources.ApplyResources(this.label11, "label11");
+            this.label11.Name = "label11";
+            //
+            // txtRequestHost
+            //
+            resources.ApplyResources(this.txtRequestHost, "txtRequestHost");
+            this.txtRequestHost.Name = "txtRequestHost";
+            //
+            // label12
+            //
+            resources.ApplyResources(this.label12, "label12");
+            this.label12.Name = "label12";
+            //
+            // txtPath
+            //
+            resources.ApplyResources(this.txtPath, "txtPath");
+            this.txtPath.Name = "txtPath";
+            //
             // label4
-            // 
+            //
             resources.ApplyResources(this.label4, "label4");
             this.label4.Name = "label4";
             // 
@@ -224,6 +292,14 @@
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.Label label4;
         private System.Windows.Forms.TextBox txtSNI;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.ComboBox cmbNetwork;
+        private System.Windows.Forms.Label label10;
+        private System.Windows.Forms.ComboBox cmbHeaderType;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.TextBox txtRequestHost;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.TextBox txtPath;
         private System.Windows.Forms.Label label15;
         private System.Windows.Forms.ComboBox cmbStreamSecurity;
         private System.Windows.Forms.Label label21;

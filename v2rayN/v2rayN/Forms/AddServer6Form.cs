@@ -43,6 +43,7 @@ namespace v2rayN.Forms
             txtRemarks.Text = vmessItem.remarks;
             cmbStreamSecurity.Text = vmessItem.streamSecurity;
             cmbAllowInsecure.Text = vmessItem.allowInsecure;
+            chkMux.Checked = vmessItem.muxEnabled.HasValue ? vmessItem.muxEnabled.Value : config.muxEnabled;
         }
 
 
@@ -62,6 +63,7 @@ namespace v2rayN.Forms
             txtRemarks.Text = ""; 
             cmbStreamSecurity.Text = "tls";
             cmbAllowInsecure.Text = "";
+            chkMux.Checked = config.muxEnabled;
         }
 
         private void cmbNetwork_SelectedIndexChanged(object sender, EventArgs e)
@@ -116,6 +118,7 @@ namespace v2rayN.Forms
             string remarks = txtRemarks.Text;
             string streamSecurity = cmbStreamSecurity.Text;
             string allowInsecure = cmbAllowInsecure.Text;
+            bool muxEnabled = chkMux.Checked;
 
             if (Utils.IsNullOrEmpty(address))
             {
@@ -144,6 +147,7 @@ namespace v2rayN.Forms
             vmessItem.remarks = remarks;
             vmessItem.streamSecurity = streamSecurity;
             vmessItem.allowInsecure = allowInsecure;
+            vmessItem.muxEnabled = muxEnabled;
 
             if (ConfigHandler.AddTrojanServer(ref config, vmessItem, EditIndex) == 0)
             {

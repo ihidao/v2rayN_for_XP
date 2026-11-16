@@ -297,7 +297,8 @@ namespace v2rayN.Handler
                 allowInsecure = config.vmess[index].allowInsecure,
                 configType = config.vmess[index].configType,
                 flow = config.vmess[index].flow,
-                sni = config.vmess[index].sni
+                sni = config.vmess[index].sni,
+                muxEnabled = config.vmess[index].muxEnabled
             };
 
             config.vmess.Insert(index + 1, vmessItem); // 插入到下一项

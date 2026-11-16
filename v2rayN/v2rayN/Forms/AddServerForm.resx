@@ -898,7 +898,7 @@
     <value>Bottom</value>
   </data>
   <data name="groupBox2.Location" type="System.Drawing.Point, System.Drawing">
-    <value>3, 215</value>
+    <value>3, 185</value>
   </data>
   <data name="groupBox2.Size" type="System.Drawing.Size, System.Drawing">
     <value>723, 281</value>
@@ -1258,7 +1258,7 @@
     <value>0, 35</value>
   </data>
   <data name="groupBox1.Size" type="System.Drawing.Size, System.Drawing">
-    <value>729, 499</value>
+    <value>729, 469</value>
   </data>
   <data name="groupBox1.TabIndex" type="System.Int32, mscorlib">
     <value>3</value>
@@ -1306,7 +1306,7 @@
     <value>Bottom</value>
   </data>
   <data name="panel2.Location" type="System.Drawing.Point, System.Drawing">
-    <value>0, 534</value>
+    <value>0, 504</value>
   </data>
   <data name="panel2.Size" type="System.Drawing.Size, System.Drawing">
     <value>729, 60</value>
@@ -1411,7 +1411,7 @@
     <value>6, 12</value>
   </data>
   <data name="$this.ClientSize" type="System.Drawing.Size, System.Drawing">
-    <value>729, 594</value>
+    <value>729, 564</value>
   </data>
   <data name="$this.Text" xml:space="preserve">
     <value>Edit or add a [VMess] server</value>

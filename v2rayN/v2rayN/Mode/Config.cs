@@ -588,6 +588,14 @@ namespace v2rayN.Mode
         }
 
         /// <summary>
+        /// Per-server Mux setting. Null keeps the global setting for old profiles.
+        /// </summary>
+        public bool? muxEnabled
+        {
+            get; set;
+        }
+
+        /// <summary>
         /// VLESS flow
         /// </summary>
         public string flow

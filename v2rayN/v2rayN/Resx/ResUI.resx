@@ -479,4 +479,14 @@
   <data name="CoreTypeV2RayLegacy" xml:space="preserve"><value>v2ray_core (below 5.0)</value></data>
   <data name="CoreTypeXray1" xml:space="preserve"><value>xray_core (1.0 or above)</value></data>
   <data name="CoreTypeXrayLegacy" xml:space="preserve"><value>xray_core (below 1.0)</value></data>
+
+  <data name="RoutingBypassMainland" xml:space="preserve">
+    <value>Bypass Mainland (Whitelist)</value>
+  </data>
+  <data name="RoutingBlacklist" xml:space="preserve">
+    <value>Blacklist</value>
+  </data>
+  <data name="RoutingGlobal" xml:space="preserve">
+    <value>Global</value>
+  </data>
 </root>

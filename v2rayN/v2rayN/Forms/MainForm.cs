@@ -595,6 +595,10 @@ namespace v2rayN.Forms
                     Utils.SaveLog("Statistics initialization failed: " + ex.Message, ex);
                 }
             }
+            else
+            {
+                mainMsgControl.SetSpeedDisabled();
+            }
             ChangePACButtonStatus(config.sysProxyType);
 
             BeginInvoke(new Action(() =>

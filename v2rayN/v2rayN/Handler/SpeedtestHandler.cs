@@ -44,19 +44,19 @@ namespace v2rayN.Handler
 
             if (actionType == ESpeedActionType.Ping)
             {
-                Task.Run(RunPing);
+                Task.Factory.StartNew(RunPing);
             }
             else if (actionType == ESpeedActionType.Tcping)
             {
-                Task.Run(RunTcping);
+                Task.Factory.StartNew(RunTcping);
             }
             else if (actionType == ESpeedActionType.Realping)
             {
-                Task.Run(RunRealPing);
+                Task.Factory.StartNew(RunRealPing);
             }
             else if (actionType == ESpeedActionType.Speedtest)
             {
-                Task.Run(RunSpeedTestAsync);
+                Task.Factory.StartNew(() => RunSpeedTestAsync()).Unwrap();
             }
         }
 
@@ -68,7 +68,7 @@ namespace v2rayN.Handler
                 {
                     try
                     {
-                        Task.Run(() => updateFun(it));
+                        Task.Factory.StartNew(() => updateFun(it));
                     }
                     catch (Exception ex)
                     {
@@ -132,7 +132,7 @@ namespace v2rayN.Handler
                     {
                         continue;
                     }
-                    tasks.Add(Task.Run(() =>
+                    tasks.Add(Task.Factory.StartNew(() =>
                     {
                         try
                         {

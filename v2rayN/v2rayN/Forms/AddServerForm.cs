@@ -18,8 +18,7 @@ namespace v2rayN.Forms
         {
             Text = (eConfigType).ToString();
             
-            cmbCoreType.Items.AddRange(Global.coreTypes.ToArray());
-            cmbCoreType.Items.Add(string.Empty);
+            InitCoreTypeCombo(cmbCoreType, vmessItem == null ? (ECoreType?)null : vmessItem.coreType);
 
             switch (eConfigType)
             {
@@ -108,7 +107,7 @@ namespace v2rayN.Forms
                     break;
             }
 
-            cmbCoreType.Text = vmessItem.coreType == null ? string.Empty : vmessItem.coreType.ToString();
+            InitCoreTypeCombo(cmbCoreType, vmessItem.coreType);
 
             transportControl.BindingServer(vmessItem);
         }
@@ -229,14 +228,7 @@ namespace v2rayN.Forms
             vmessItem.alterId = Utils.ToInt(alterId);
             vmessItem.security = security;
 
-            if (Utils.IsNullOrEmpty(cmbCoreType.Text))
-            {
-                vmessItem.coreType = null;
-            }
-            else
-            {
-                vmessItem.coreType = (ECoreType)Enum.Parse(typeof(ECoreType), cmbCoreType.Text);
-            }
+            vmessItem.coreType = GetSelectedCoreType(cmbCoreType);
 
             int ret = -1;
             switch (eConfigType)

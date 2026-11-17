@@ -24,11 +24,12 @@ namespace v2rayN.Handler
 
         public List<string> GetShadowsocksSecuritys(VmessItem vmessItem)
         {
-            if (GetCoreType(vmessItem, EConfigType.Shadowsocks) == ECoreType.v2fly)
+            var coreType = GetCoreType(vmessItem, EConfigType.Shadowsocks);
+            if (coreType == ECoreType.v2fly || coreType == ECoreType.v2fly_v5)
             {
                 return Global.ssSecuritys;
             }
-            if (GetCoreType(vmessItem, EConfigType.Shadowsocks) == ECoreType.Xray)
+            if (coreType == ECoreType.Xray || coreType == ECoreType.Xray_legacy)
             {
                 return Global.ssSecuritysInXray;
             }

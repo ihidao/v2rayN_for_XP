@@ -15,9 +15,6 @@ A Windows XP-compatible adaptation of [2dust/v2rayN](https://github.com/2dust/v2
 - route rules [https://github.com/Loyalsoldier/v2ray-rules-dat](https://github.com/Loyalsoldier/v2ray-rules-dat)
 
 ### XP compatibility notes
-- The application is built for .NET Framework 4.0 and x86.
-- gRPC traffic statistics are disabled in this XP build.
-- The upstream V2Ray/Xray core releases are not guaranteed to run on Windows XP. Use core binaries specifically built for XP.
 - Windows XP's built-in Schannel does not provide the TLS 1.2 support available on newer Windows versions. HTTPS access to services that require TLS 1.2 may fail unless a separate TLS-capable proxy/provider is used.
 
 

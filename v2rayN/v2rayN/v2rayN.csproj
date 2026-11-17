@@ -45,7 +45,7 @@
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Bcl.Async" Version="1.0.168" />
     <PackageReference Include="Microsoft.Net.Http" Version="2.2.29" />
-    <PackageReference Include="SharpZipLib" Version="0.86.0" />
+    <PackageReference Include="ICSharpCode.SharpZipLib.Patched" Version="0.86.5.3" />
     <PackageReference Include="log4net">
       <Version>2.0.15</Version>
     </PackageReference>

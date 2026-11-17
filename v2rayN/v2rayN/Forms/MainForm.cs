@@ -264,7 +264,7 @@ namespace v2rayN.Forms
             lvServers.Columns.Add(ResUI.LvSubscription, 100);
             lvServers.Columns.Add(ResUI.LvTestResults, 120, HorizontalAlignment.Right);
 
-            if (statistics != null && statistics.Enable)
+            if (config.enableStatistics)
             {
                 lvServers.Columns.Add(ResUI.LvTodayDownloadDataAmount, 70);
                 lvServers.Columns.Add(ResUI.LvTodayUploadDataAmount, 70);

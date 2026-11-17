@@ -16,16 +16,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: 8.0.x
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
 
-      - name: Restore
-        run: dotnet restore .\v2rayN\v2rayN.sln
-
-      - name: Build x86
-        run: dotnet build .\v2rayN\v2rayN.sln --configuration Release --no-restore --verbosity minimal -p:Platform=x86
+      - name: Restore and build x86
+        run: msbuild .\v2rayN\v2rayN.sln /restore /p:Configuration=Release /p:Platform=x86 /m /verbosity:minimal
 
       - name: Assemble package
         shell: pwsh

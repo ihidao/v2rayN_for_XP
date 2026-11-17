@@ -49,6 +49,9 @@ namespace v2rayN.Forms
                 return;
             }
 
+            // Traffic statistics require gRPC, which is not available in the XP/.NET 4.0 build.
+            config.enableStatistics = false;
+
             ConfigHandler.InitBuiltinRouting(ref config);
             MainFormHandler.Instance.BackupGuiNConfig(config, true);
             v2rayHandler = new V2rayHandler();

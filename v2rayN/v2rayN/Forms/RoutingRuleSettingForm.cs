@@ -338,7 +338,7 @@ namespace v2rayN.Forms
                 return;
             }
 
-            Task.Run(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 DownloadHandle downloadHandle = new DownloadHandle();
                 string result = await downloadHandle.DownloadStringAsync(url, false, "");
@@ -347,7 +347,7 @@ namespace v2rayN.Forms
                     RefreshRoutingsView();
                     UI.Show(ResUI.OperationSuccess);
                 }
-            });
+            }).Unwrap();
         }
         private int AddBatchRoutingRules(ref RoutingItem routingItem, string clipboardData)
         {

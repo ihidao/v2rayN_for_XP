@@ -274,7 +274,7 @@ namespace v2rayN.Handler
 
         public void UpdateTask(Config config, Action<bool, string> update)
         {
-            Task.Run(() => UpdateTaskRun(config, update));
+            Task.Factory.StartNew(() => UpdateTaskRun(config, update));
         }
 
         private void UpdateTaskRun(Config config, Action<bool, string> update)

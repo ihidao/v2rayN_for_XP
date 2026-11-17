@@ -1,7 +1,8 @@
-# v2rayN 5.39 for Windows XP
+# v2rayN 5.39 for XP
+A Windows XP-compatible adaptation of [2dust/v2rayN](https://github.com/2dust/v2rayN), based on upstream version 5.39.
  ![MainUI1](./screenshots/v2rayN_5.39_v2ray.png)
  ![MainUI2](./screenshots/v2rayN_5.39_xray.png)
-A Windows XP-compatible adaptation of [2dust/v2rayN](https://github.com/2dust/v2rayN), based on upstream version 5.39.
+
 
 ### How to use
 - Download v2rayN_5.39_for_XP.zip from release and extract it

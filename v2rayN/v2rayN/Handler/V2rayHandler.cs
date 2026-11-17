@@ -23,6 +23,7 @@ namespace v2rayN.Handler
     {
         private static string v2rayConfigRes = Global.v2rayConfigFileName;
         private CoreInfo coreInfo;
+        private ECoreType selectedCoreType = ECoreType.Xray;
         public event ProcessDelegate ProcessEvent;
         private int processId = 0;
         private Process _process;
@@ -209,7 +210,7 @@ namespace v2rayN.Handler
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = fileName,
-                        Arguments = coreInfo.arguments,
+                        Arguments = GetCoreArguments(selectedCoreType, coreInfo.arguments),
                         WorkingDirectory = Utils.StartupPath(),
                         UseShellExecute = false,
                         RedirectStandardOutput = coreInfo.redirectInfo,
@@ -268,7 +269,7 @@ namespace v2rayN.Handler
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = fileName,
-                        Arguments = coreInfo != null && coreInfo.coreType == ECoreType.v2fly_v5 ? "run -c stdin:" : "-config stdin:",
+                        Arguments = UsesModernConfigArguments(selectedCoreType) ? "run -c stdin:" : "-config stdin:",
                         WorkingDirectory = Utils.StartupPath(),
                         UseShellExecute = false,
                         RedirectStandardInput = true,
@@ -338,6 +339,24 @@ namespace v2rayN.Handler
             }
         }
 
+        private bool UsesModernConfigArguments(ECoreType coreType)
+        {
+            return coreType == ECoreType.v2fly_v5 || coreType == ECoreType.Xray;
+        }
+
+        private string GetCoreArguments(ECoreType coreType, string defaultArguments)
+        {
+            if (coreType == ECoreType.v2fly_v5 || coreType == ECoreType.Xray)
+            {
+                return "run -c config.json";
+            }
+            if (coreType == ECoreType.v2fly || coreType == ECoreType.Xray_legacy)
+            {
+                return "-config config.json";
+            }
+            return defaultArguments ?? string.Empty;
+        }
+
         private int SetCore(Config config, VmessItem item)
         {
             if (item == null)
@@ -345,6 +364,7 @@ namespace v2rayN.Handler
                 return -1;
             }
             var coreType = LazyConfig.Instance.GetCoreType(item, item.configType);
+            selectedCoreType = coreType;
 
             coreInfo = LazyConfig.Instance.GetCoreInfo(coreType);
 

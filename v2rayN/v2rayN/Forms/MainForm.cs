@@ -595,7 +595,10 @@ namespace v2rayN.Forms
             ConfigHandler.SaveConfig(ref config, false);
             statistics?.SaveToFile();
 
-            ChangePACButtonStatus(ESysProxyType.ForcedClear);
+            if (!SysProxyHandle.ResetIEProxy())
+            {
+                AppendText(false, "Failed to clear the Windows system proxy. See the application log for details.");
+            }
 
             v2rayHandler.V2rayStop();
         }
@@ -1404,15 +1407,26 @@ namespace v2rayN.Forms
         }
         private void SetListenerType(ESysProxyType type)
         {
+            ESysProxyType previousType = config.sysProxyType;
             config.sysProxyType = type;
-            ChangePACButtonStatus(type);
+            if (!ChangePACButtonStatus(type))
+            {
+                config.sysProxyType = previousType;
+                for (int k = 0; k < menuSysAgentMode.DropDownItems.Count; k++)
+                {
+                    ToolStripMenuItem item = menuSysAgentMode.DropDownItems[k] as ToolStripMenuItem;
+                    if (item != null)
+                        item.Checked = ((int)previousType == k);
+                }
+            }
         }
 
-        private void ChangePACButtonStatus(ESysProxyType type)
+        private bool ChangePACButtonStatus(ESysProxyType type)
         {
             if (!SysProxyHandle.UpdateSysProxy(config, false))
             {
                 AppendText(false, "System proxy update failed. See the application log for details.");
+                return false;
             }
 
             for (int k = 0; k < menuSysAgentMode.DropDownItems.Count; k++)
@@ -1422,13 +1436,13 @@ namespace v2rayN.Forms
             }
 
             ConfigHandler.SaveConfig(ref config, false);
-
             mainMsgControl.DisplayToolStatus(config);
 
             BeginInvoke(new Action(() =>
             {
                 notifyMain.Icon = Icon = MainFormHandler.Instance.GetNotifyIcon(config, Icon);
             }));
+            return true;
         }
 
         #endregion

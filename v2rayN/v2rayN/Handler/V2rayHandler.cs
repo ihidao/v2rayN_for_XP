@@ -261,7 +261,7 @@ namespace v2rayN.Handler
 
             try
             {
-                string fileName = V2rayFindexe(new List<string> { "xray", "wv2ray", "v2ray" });
+                string fileName = V2rayFindexe(coreInfo != null && coreInfo.coreExes != null ? coreInfo.coreExes : new List<string> { "xray", "wv2ray", "v2ray" });
                 if (fileName == "") return -1;
 
                 Process p = new Process

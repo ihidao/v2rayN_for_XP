@@ -22,37 +22,34 @@ jobs:
           nuget install Microsoft.NETFramework.ReferenceAssemblies.net40 -Version 1.0.3 -OutputDirectory packages
           if ($LASTEXITCODE -ne 0) { throw "Failed to install .NET Framework 4.0 reference assemblies" }
 
-      - name: Restore NuGet packages
+      - name: Restore main application NuGet packages
         shell: pwsh
         run: |
-          msbuild ".\v2rayN\v2rayN.sln" /t:Restore /p:RestoreIgnoreFailedSources=true
+          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /t:Restore /p:RestoreIgnoreFailedSources=true
           if ($LASTEXITCODE -ne 0) { throw "NuGet restore failed" }
 
-      - name: Build .NET Framework 4.0 x86 solution
+      - name: Build main application (.NET Framework 4.0 x86)
         shell: pwsh
         run: |
-          msbuild ".\v2rayN\v2rayN.sln" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
+          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
           if ($LASTEXITCODE -ne 0) { throw ".NET Framework 4.0 x86 build failed" }
 
       - name: Prepare build files
         shell: pwsh
         run: |
           $main = ".\v2rayN\v2rayN\bin\Release\net40"
-          $upgrade = ".\v2rayN\v2rayUpgrade\bin\Release\net40"
           $out = Join-Path $env:GITHUB_WORKSPACE "publish"
 
           if (!(Test-Path $main)) { throw "Main application output not found: $main" }
-          if (!(Test-Path $upgrade)) { throw "Upgrade application output not found: $upgrade" }
 
           if (Test-Path $out) { Remove-Item $out -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item (Join-Path $main "*") $out -Recurse -Force
-          Copy-Item (Join-Path $upgrade "*") $out -Recurse -Force
 
           if (!(Get-ChildItem $out -File -Recurse | Select-Object -First 1)) {
             throw "No build files were copied to the publish directory."
           }
-          Write-Host "Prepared build files in: $out"
+          Write-Host "Prepared main application files in: $out"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4

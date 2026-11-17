@@ -34,7 +34,7 @@ jobs:
           msbuild ".\v2rayN\v2rayN.sln" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
           if ($LASTEXITCODE -ne 0) { throw ".NET Framework 4.0 x86 build failed" }
 
-      - name: Assemble ZIP package
+      - name: Prepare build files
         shell: pwsh
         run: |
           $main = ".\v2rayN\v2rayN\bin\Release\net40"
@@ -44,20 +44,20 @@ jobs:
           if (!(Test-Path $main)) { throw "Main application output not found: $main" }
           if (!(Test-Path $upgrade)) { throw "Upgrade application output not found: $upgrade" }
 
+          if (Test-Path $out) { Remove-Item $out -Recurse -Force }
           New-Item -ItemType Directory -Force -Path $out | Out-Null
           Copy-Item (Join-Path $main "*") $out -Recurse -Force
           Copy-Item (Join-Path $upgrade "*") $out -Recurse -Force
 
-          $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
-          $zip = "v2rayN-5.39-XP-net40-x86-$stamp.zip"
-          Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip -Force
-          "PACKAGE_NAME=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
-          Write-Host "Created package: $zip"
+          if (!(Get-ChildItem $out -File -Recurse | Select-Object -First 1)) {
+            throw "No build files were copied to the publish directory."
+          }
+          Write-Host "Prepared build files in: $out"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: v2rayN-5.39-XP-net40-x86
-          path: v2rayN-5.39-XP-net40-x86-*.zip
+          path: publish/**
           if-no-files-found: error
           retention-days: 14

@@ -2,12 +2,6 @@ name: Build v2rayN 5.39 XP (.NET Framework 4.0)
 
 on:
   workflow_dispatch:
-  push:
-    branches:
-      - v2rayN_5.39_XP
-    paths:
-      - "v2rayN/**"
-      - ".github/workflows/build-v2rayn539-net40.yml"
 
 jobs:
   build:

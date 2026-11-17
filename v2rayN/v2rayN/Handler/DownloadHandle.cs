@@ -13,6 +13,32 @@ using v2rayN.Resx;
 
 namespace v2rayN.Handler
 {
+    // .NET Framework 4.0 does not include Progress<T>; this implementation preserves
+    // the SynchronizationContext behavior used by the WinForms UI.
+    internal sealed class Progress<T> : IProgress<T>
+    {
+        private readonly SynchronizationContext _context;
+
+        public event Action<object, T> ProgressChanged;
+
+        public Progress()
+        {
+            _context = SynchronizationContext.Current;
+        }
+
+        public void Report(T value)
+        {
+            Action<object, T> handler = ProgressChanged;
+            if (handler == null)
+                return;
+
+            if (_context != null)
+                _context.Post(state => handler(this, value), null);
+            else
+                handler(this, value);
+        }
+    }
+
     /// <summary>
     ///Download
     /// </summary>

@@ -316,13 +316,15 @@ namespace v2rayN.Forms
                 Utils.AddSubItem(lvItem, EServerColName.subRemarks.ToString(), item.GetSubRemarks(config));
                 Utils.AddSubItem(lvItem, EServerColName.testResult.ToString(), item.testResult);
 
-                if (statistics != null && statistics.Enable)
+                if (config.enableStatistics)
                 {
                     string totalUp = string.Empty,
                         totalDown = string.Empty,
                         todayUp = string.Empty,
                         todayDown = string.Empty;
-                    ServerStatItem sItem = statistics.Statistic.Find(item_ => item_.itemId == item.indexId);
+                    ServerStatItem sItem = statistics == null
+                        ? null
+                        : statistics.Statistic.Find(item_ => item_.itemId == item.indexId);
                     if (sItem != null)
                     {
                         totalUp = Utils.HumanFy(sItem.totalUp);
@@ -331,6 +333,7 @@ namespace v2rayN.Forms
                         todayDown = Utils.HumanFy(sItem.todayDown);
                     }
 
+                    // Always create statistic subitems, even before the polling worker starts.
                     Utils.AddSubItem(lvItem, EServerColName.todayDown.ToString(), todayDown);
                     Utils.AddSubItem(lvItem, EServerColName.todayUp.ToString(), todayUp);
                     Utils.AddSubItem(lvItem, EServerColName.totalDown.ToString(), totalDown);

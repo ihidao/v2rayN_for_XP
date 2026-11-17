@@ -547,7 +547,7 @@ namespace v2rayN.Forms
             {
                 mainMsgControl.ClearMsg();
             }
-            await Task.Run(() =>
+            await Task.Factory.StartNew(() =>
             {
                 v2rayHandler.LoadV2ray(config);
             });
@@ -1052,7 +1052,7 @@ namespace v2rayN.Forms
         {
             HideForm();
 
-            string result = await Task.Run(() =>
+            string result = await Task.Factory.StartNew(() =>
             {
                 return Utils.ScanScreen();
             });
@@ -1437,7 +1437,7 @@ namespace v2rayN.Forms
 
         private void tsbCheckUpdateGeo_Click(object sender, EventArgs e)
         {
-            Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
                 var updateHandle = new UpdateHandle();
                 updateHandle.UpdateGeoFile("geosite", config, UpdateTaskHandler);

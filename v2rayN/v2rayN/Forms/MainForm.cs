@@ -51,6 +51,7 @@ namespace v2rayN.Forms
 
             // Traffic statistics require gRPC, which is not available in the XP/.NET 4.0 build.
             config.enableStatistics = false;
+            menuClearServerStatistics.Visible = false;
 
             ConfigHandler.InitBuiltinRouting(ref config);
             MainFormHandler.Instance.BackupGuiNConfig(config, true);

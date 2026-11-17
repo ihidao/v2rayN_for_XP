@@ -97,7 +97,6 @@ namespace v2rayN.Handler
                 ShowMsg(false, msg);
                 pid = V2rayStartNew(configStr);
                 //V2rayRestart();
-                // start with -config
             }
             return pid;
         }
@@ -259,25 +258,50 @@ namespace v2rayN.Handler
         {
             ShowMsg(false, string.Format(ResUI.StartService, DateTime.Now.ToString()));
 
+            string configFile = null;
             try
             {
                 string fileName = V2rayFindexe(coreInfo != null && coreInfo.coreExes != null ? coreInfo.coreExes : new List<string> { "xray", "wv2ray", "v2ray" });
                 if (fileName == "") return -1;
+
+                // V2Ray/Xray on Windows treats "stdin:" as a file path.
+                // Write the temporary config to disk and pass its real path instead.
+                configFile = Path.Combine(Path.GetTempPath(), "v2rayN_speedtest_" + Guid.NewGuid().ToString("N") + ".json");
+                File.WriteAllText(configFile, configStr, new UTF8Encoding(false));
+
+                string configArgument = "\"" + configFile + "\"";
+                string arguments = UsesModernConfigArguments(selectedCoreType)
+                    ? "run -c " + configArgument
+                    : "-config " + configArgument;
 
                 Process p = new Process
                 {
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = fileName,
-                        Arguments = UsesModernConfigArguments(selectedCoreType) ? "run -c stdin:" : "-config stdin:",
+                        Arguments = arguments,
                         WorkingDirectory = Utils.StartupPath(),
                         UseShellExecute = false,
-                        RedirectStandardInput = true,
                         RedirectStandardOutput = true,
                         RedirectStandardError = true,
                         CreateNoWindow = true,
                         StandardOutputEncoding = Encoding.UTF8,
                         StandardErrorEncoding = Encoding.UTF8
+                    },
+                    EnableRaisingEvents = true
+                };
+                p.Exited += (sender, e) =>
+                {
+                    try
+                    {
+                        if (File.Exists(configFile))
+                        {
+                            File.Delete(configFile);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Utils.SaveLog(ex.Message, ex);
                     }
                 };
                 p.OutputDataReceived += (sender, e) =>
@@ -291,9 +315,6 @@ namespace v2rayN.Handler
                 p.Start();
                 p.BeginOutputReadLine();
 
-                p.StandardInput.Write(configStr);
-                p.StandardInput.Close();
-
                 if (p.WaitForExit(1000))
                 {
                     throw new Exception(p.StandardError.ReadToEnd());
@@ -304,6 +325,19 @@ namespace v2rayN.Handler
             }
             catch (Exception ex)
             {
+                if (!string.IsNullOrEmpty(configFile))
+                {
+                    try
+                    {
+                        if (File.Exists(configFile))
+                        {
+                            File.Delete(configFile);
+                        }
+                    }
+                    catch
+                    {
+                    }
+                }
                 Utils.SaveLog(ex.Message, ex);
                 string msg = ex.Message;
                 ShowMsg(false, msg);

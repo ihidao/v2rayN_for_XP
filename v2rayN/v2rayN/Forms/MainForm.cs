@@ -49,10 +49,6 @@ namespace v2rayN.Forms
                 return;
             }
 
-            // Traffic statistics require gRPC, which is not available in the XP/.NET 4.0 build.
-            config.enableStatistics = false;
-            menuClearServerStatistics.Visible = false;
-
             ConfigHandler.InitBuiltinRouting(ref config);
             MainFormHandler.Instance.BackupGuiNConfig(config, true);
             v2rayHandler = new V2rayHandler();
@@ -547,14 +543,44 @@ namespace v2rayN.Forms
             {
                 mainMsgControl.ClearMsg();
             }
+
+            StatisticsHandler previousStatistics = statistics;
+            statistics = null;
+            if (previousStatistics != null)
+            {
+                previousStatistics.UpdateUI = false;
+            }
+
             await Task.Factory.StartNew(() =>
             {
+                if (previousStatistics != null)
+                {
+                    previousStatistics.Close();
+                }
                 v2rayHandler.LoadV2ray(config);
             });
 
             Global.reloadV2ray = false;
             ConfigHandler.SaveConfig(ref config, false);
-            statistics?.SaveToFile();
+
+            if (config.enableStatistics)
+            {
+                try
+                {
+                    statistics = new StatisticsHandler(config, UpdateStatisticsHandler);
+                    statistics.UpdateUI = Visible;
+                    statistics.Run();
+                }
+                catch (Exception ex)
+                {
+                    statistics = null;
+                    Utils.SaveLog("Statistics initialization failed: " + ex.Message, ex);
+                }
+            }
+            else
+            {
+                mainMsgControl.SetToolSslInfo("speed", "0/s↑ | 0/s↓");
+            }
 
             ChangePACButtonStatus(config.sysProxyType);
 
@@ -889,6 +915,7 @@ namespace v2rayN.Forms
             OptionSettingForm fm = new OptionSettingForm();
             if (fm.ShowDialog() == DialogResult.OK)
             {
+                InitServersView();
                 RefreshServers();
                 _ = LoadV2ray();
             }
@@ -1232,38 +1259,70 @@ namespace v2rayN.Forms
             });
         }
 
-        private void UpdateStatisticsHandler(ulong up, ulong down, List<ServerStatItem> statistics)
+        private void UpdateStatisticsHandler(ulong up, ulong down, List<ServerStatItem> statisticsData)
         {
-            try
+            if (InvokeRequired)
             {
-                up /= (ulong)(config.statisticsFreshRate);
-                down /= (ulong)(config.statisticsFreshRate);
-                mainMsgControl.SetToolSslInfo("speed", string.Format("{0}/s↑ | {1}/s↓", Utils.HumanFy(up), Utils.HumanFy(down)));
-
-                foreach (var it in statistics)
+                try
                 {
-                    int index = lstVmess.FindIndex(item => item.indexId == it.itemId);
-                    if (index < 0)
+                    BeginInvoke((MethodInvoker)delegate
                     {
-                        continue;
-                    }
-                    lvServers.Invoke((MethodInvoker)delegate
-                    {
-                        lvServers.BeginUpdate();
-
-                        lvServers.Items[index].SubItems["todayDown"].Text = Utils.HumanFy(it.todayDown);
-                        lvServers.Items[index].SubItems["todayUp"].Text = Utils.HumanFy(it.todayUp);
-                        lvServers.Items[index].SubItems["totalDown"].Text = Utils.HumanFy(it.totalDown);
-                        lvServers.Items[index].SubItems["totalUp"].Text = Utils.HumanFy(it.totalUp);
-
-                        lvServers.EndUpdate();
+                        UpdateStatisticsHandler(up, down, statisticsData);
                     });
                 }
+                catch (InvalidOperationException) { }
+                catch (ObjectDisposedException) { }
+                return;
+            }
 
+            if (statistics == null || !statistics.Enable || IsDisposed || Disposing)
+            {
+                return;
+            }
+
+            try
+            {
+                int refreshRate = config.statisticsFreshRate;
+                if (refreshRate < 1)
+                {
+                    refreshRate = 1;
+                }
+
+                up /= (ulong)refreshRate;
+                down /= (ulong)refreshRate;
+                mainMsgControl.SetToolSslInfo("speed", string.Format("{0}/s↑ | {1}/s↓",
+                    Utils.HumanFy(up), Utils.HumanFy(down)));
+
+                lvServers.BeginUpdate();
+                try
+                {
+                    foreach (ServerStatItem item in statisticsData)
+                    {
+                        int index = lstVmess.FindIndex(server => server.indexId == item.itemId);
+                        if (index < 0 || index >= lvServers.Items.Count)
+                        {
+                            continue;
+                        }
+
+                        ListViewItem row = lvServers.Items[index];
+                        if (row.SubItems.ContainsKey("todayDown"))
+                            row.SubItems["todayDown"].Text = Utils.HumanFy(item.todayDown);
+                        if (row.SubItems.ContainsKey("todayUp"))
+                            row.SubItems["todayUp"].Text = Utils.HumanFy(item.todayUp);
+                        if (row.SubItems.ContainsKey("totalDown"))
+                            row.SubItems["totalDown"].Text = Utils.HumanFy(item.totalDown);
+                        if (row.SubItems.ContainsKey("totalUp"))
+                            row.SubItems["totalUp"].Text = Utils.HumanFy(item.totalUp);
+                    }
+                }
+                finally
+                {
+                    lvServers.EndUpdate();
+                }
             }
             catch (Exception ex)
             {
-                Utils.SaveLog(ex.Message, ex);
+                Utils.SaveLog("Update statistics UI failed: " + ex.Message, ex);
             }
         }
 

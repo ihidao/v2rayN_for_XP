@@ -53,11 +53,8 @@ namespace v2rayN.Forms
             MainFormHandler.Instance.BackupGuiNConfig(config, true);
             v2rayHandler = new V2rayHandler();
             v2rayHandler.ProcessEvent += v2rayHandler_ProcessEvent;
-
-            if (config.enableStatistics)
-            {
-                statistics = new StatisticsHandler(config, UpdateStatisticsHandler);
-            }
+            // Statistics are initialized after the core has started in LoadV2ray().
+            // Avoid loading the statistics file twice during application startup.
         }
 
         private void MainForm_VisibleChanged(object sender, EventArgs e)
@@ -1275,7 +1272,12 @@ namespace v2rayN.Forms
                 return;
             }
 
-            if (statistics == null || !statistics.Enable || IsDisposed || Disposing)
+            // Ignore a queued callback from a worker that has already been replaced.
+            if (statistics == null
+                || !statistics.Enable
+                || !Object.ReferenceEquals(statistics.Statistic, statisticsData)
+                || IsDisposed
+                || Disposing)
             {
                 return;
             }

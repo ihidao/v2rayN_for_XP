@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Globalization;
 using System.Linq;
 using System.Net;
 using System.Text;
@@ -15,6 +16,12 @@ namespace v2rayN.Handler
 {
     class ShareHandler
     {
+        private static string GetIdnHost(Uri uri)
+        {
+            return uri.HostNameType == UriHostNameType.Dns
+                ? new IdnMapping().GetAscii(uri.Host)
+                : uri.Host;
+        }
 
         #region GetShareUrl
 
@@ -468,7 +475,7 @@ namespace v2rayN.Handler
 
             Uri u = new Uri(result);
 
-            i.address = u.IdnHost;
+            i.address = GetIdnHost(u);
             i.port = u.Port;
             i.remarks = u.GetComponents(UriComponents.Fragment, UriFormat.Unescaped);
             var q = HttpUtility.ParseQueryString(u.Query);
@@ -553,7 +560,7 @@ namespace v2rayN.Handler
             VmessItem server = new VmessItem
             {
                 remarks = parsedUrl.GetComponents(UriComponents.Fragment, UriFormat.Unescaped),
-                address = parsedUrl.IdnHost,
+                address = GetIdnHost(parsedUrl),
                 port = parsedUrl.Port,
             };
             string rawUserInfo = parsedUrl.GetComponents(UriComponents.UserInfo, UriFormat.UriEscaped);
@@ -702,7 +709,7 @@ namespace v2rayN.Handler
             VmessItem server = new VmessItem
             {
                 remarks = parsedUrl.GetComponents(UriComponents.Fragment, UriFormat.Unescaped),
-                address = parsedUrl.IdnHost,
+                address = GetIdnHost(parsedUrl),
                 port = parsedUrl.Port,
             };
 
@@ -728,7 +735,7 @@ namespace v2rayN.Handler
 
             Uri url = new Uri(result);
 
-            item.address = url.IdnHost;
+            item.address = GetIdnHost(url);
             item.port = url.Port;
             item.remarks = url.GetComponents(UriComponents.Fragment, UriFormat.Unescaped);
             item.id = url.UserInfo;
@@ -748,7 +755,7 @@ namespace v2rayN.Handler
 
             Uri url = new Uri(result);
 
-            item.address = url.IdnHost;
+            item.address = GetIdnHost(url);
             item.port = url.Port;
             item.remarks = url.GetComponents(UriComponents.Fragment, UriFormat.Unescaped);
             item.id = url.UserInfo;

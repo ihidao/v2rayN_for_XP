@@ -214,7 +214,14 @@ namespace v2rayN
         public static readonly List<string> xtlsFlows = new List<string> { "", "xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-vision", "xtls-rprx-vision-udp443" };
         public static readonly List<string> networks = new List<string> { "tcp", "kcp", "ws", "h2", "quic", "grpc" };
         public static readonly List<string> kcpHeaderTypes = new List<string> { "srtp", "utp", "wechat-video", "dtls", "wireguard" };
-        public static readonly List<string> coreTypes = new List<string> { "v2fly", "SagerNet", "Xray", "v2fly_v5" };
+        public static readonly List<string> coreTypes = new List<string>
+        {
+            "v2ray_core_5_or_above",
+            "v2ray_core_below_5",
+            "xray_core_1_or_above",
+            "xray_core_below_1",
+            "SagerNet"
+        };
         public static readonly List<string> domainMatchers = new List<string> { "linear", "mph", "" };
         public static readonly List<string> fingerprints = new List<string> { "chrome", "firefox", "safari", "randomized", "" };
         public static readonly List<string> domainStrategy4Freedoms = new List<string> { "AsIs", "UseIP", "UseIPv4", "UseIPv6", "" };

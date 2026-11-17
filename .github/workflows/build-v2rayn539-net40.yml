@@ -1,32 +1,63 @@
-name: Build v2rayN 5.39 XP (.NET Framework 4.0)
+name: Build v2rayN 5.39 for XP
 
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  build:
+  Build_v2rayN_5_39_for_XP:
     runs-on: windows-2022
     steps:
-      - name: Checkout
+      - name: Checkout source
         uses: actions/checkout@v4
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
 
-      - name: Restore and build x86
-        run: msbuild .\v2rayN\v2rayN.sln /restore /p:Configuration=Release /p:Platform=x86 /m /verbosity:minimal
-
-      - name: Assemble package
+      - name: Install .NET Framework 4.0 reference assemblies
         shell: pwsh
         run: |
+          nuget install Microsoft.NETFramework.ReferenceAssemblies.net40 -Version 1.0.3 -OutputDirectory packages
+          if ($LASTEXITCODE -ne 0) { throw "Failed to install .NET Framework 4.0 reference assemblies" }
+
+      - name: Restore NuGet packages
+        shell: pwsh
+        run: |
+          msbuild ".\v2rayN\v2rayN.sln" /t:Restore /p:RestoreIgnoreFailedSources=true
+          if ($LASTEXITCODE -ne 0) { throw "NuGet restore failed" }
+
+      - name: Build .NET Framework 4.0 x86 solution
+        shell: pwsh
+        run: |
+          msbuild ".\v2rayN\v2rayN.sln" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
+          if ($LASTEXITCODE -ne 0) { throw ".NET Framework 4.0 x86 build failed" }
+
+      - name: Assemble ZIP package
+        shell: pwsh
+        run: |
+          $main = ".\v2rayN\v2rayN\bin\Release\net40"
+          $upgrade = ".\v2rayN\v2rayUpgrade\bin\Release\net40"
           $out = Join-Path $env:GITHUB_WORKSPACE "publish"
+
+          if (!(Test-Path $main)) { throw "Main application output not found: $main" }
+          if (!(Test-Path $upgrade)) { throw "Upgrade application output not found: $upgrade" }
+
           New-Item -ItemType Directory -Force -Path $out | Out-Null
-          Copy-Item ".\v2rayN\v2rayN\bin\Release\net40\*" $out -Recurse -Force
-          Copy-Item ".\v2rayN\v2rayUpgrade\bin\Release\net40\*" $out -Recurse -Force
-          Compress-Archive -Path (Join-Path $out "*") -DestinationPath ".\v2rayN-5.39-XP-net40-x86.zip" -Force
+          Copy-Item (Join-Path $main "*") $out -Recurse -Force
+          Copy-Item (Join-Path $upgrade "*") $out -Recurse -Force
+
+          $stamp = Get-Date -Format "yyyyMMdd-HHmmss"
+          $zip = "v2rayN-5.39-XP-net40-x86-$stamp.zip"
+          Compress-Archive -Path (Join-Path $out "*") -DestinationPath $zip -Force
+          "PACKAGE_NAME=$zip" | Out-File -FilePath $env:GITHUB_OUTPUT -Append -Encoding utf8
+          Write-Host "Created package: $zip"
 
       - name: Upload build artifact
         uses: actions/upload-artifact@v4
         with:
           name: v2rayN-5.39-XP-net40-x86
-          path: v2rayN-5.39-XP-net40-x86.zip
+          path: v2rayN-5.39-XP-net40-x86-*.zip
+          if-no-files-found: error
+          retention-days: 14

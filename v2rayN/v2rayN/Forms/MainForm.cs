@@ -244,6 +244,8 @@ namespace v2rayN.Forms
         {
             lvServers.BeginUpdate();
             lvServers.Items.Clear();
+            // Rebuild columns from scratch when statistics settings change.
+            lvServers.Columns.Clear();
 
             lvServers.GridLines = true;
             lvServers.FullRowSelect = true;

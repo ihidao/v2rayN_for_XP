@@ -6,6 +6,7 @@ using v2rayN.Mode;
 using v2rayN.Base;
 using System.Linq;
 using v2rayN.Tool;
+using System.Threading.Tasks;
 
 namespace v2rayN.Handler
 {
@@ -15,6 +16,7 @@ namespace v2rayN.Handler
     class ConfigHandler
     {
         private static string configRes = Global.ConfigFileName;
+        private static readonly object objLock = new object();
 
         #region ConfigHandler
 
@@ -32,11 +34,19 @@ namespace v2rayN.Handler
                 //转成Json
                 config = Utils.FromJson<Config>(result);
             }
+            else
+            {
+                if (File.Exists(Utils.GetPath(configRes)))
+                {
+                    Utils.SaveLog("LoadConfig Exception");
+                    return -1;
+                }
+            }
+
             if (config == null)
             {
                 config = new Config
                 {
-                    index = -1,
                     logEnabled = false,
                     loglevel = "warning",
                     vmess = new List<VmessItem>(),
@@ -44,25 +54,12 @@ namespace v2rayN.Handler
                     //Mux
                     muxEnabled = false,
 
-                    ////默认监听端口
-                    //config.pacPort = 8888;
-
-                    // 默认不开启统计
                     enableStatistics = false,
 
-                    // 默认中等刷新率
-                    statisticsFreshRate = (int)Global.StatisticsFreshRate.medium
-                };
-            }
+                    statisticsFreshRate = 1,
 
-            // Ensure the default system proxy bypass list is present in both new and existing configs.
-            if (Utils.IsNullOrEmpty(config.systemProxyExceptions))
-            {
-                config.systemProxyExceptions = Global.IEProxyExceptions;
-            }
-            if (!config.systemProxyExceptions.Split(';').Any(item => item.Trim().Equals("<local>", StringComparison.OrdinalIgnoreCase)))
-            {
-                config.systemProxyExceptions = config.systemProxyExceptions.TrimEnd(';') + ";<local>";
+                    enableRoutingAdvanced = true
+                };
             }
 
             //本地监听
@@ -88,7 +85,6 @@ namespace v2rayN.Handler
             }
             else
             {
-                //http协议不由core提供,只保留socks
                 if (config.inbound.Count > 0)
                 {
                     config.inbound[0].protocol = Global.InboundSocks;
@@ -99,10 +95,10 @@ namespace v2rayN.Handler
             {
                 config.domainStrategy = "IPIfNonMatch";
             }
-            if (Utils.IsNullOrEmpty(config.domainMatcher))
-            {
-                config.domainMatcher = "linear";
-            }
+            //if (Utils.IsNullOrEmpty(config.domainMatcher))
+            //{
+            //    config.domainMatcher = "linear";
+            //}
 
             //kcp
             if (config.kcpItem == null)
@@ -120,21 +116,32 @@ namespace v2rayN.Handler
             }
             if (config.uiItem == null)
             {
-                config.uiItem = new UIItem();
+                config.uiItem = new UIItem()
+                {
+                    enableAutoAdjustMainLvColWidth = true
+                };
             }
             if (config.uiItem.mainLvColWidth == null)
             {
                 config.uiItem.mainLvColWidth = new Dictionary<string, int>();
             }
 
-            //// 如果是用户升级，首次会有端口号为0的情况，不可用，这里处理
-            //if (config.pacPort == 0)
-            //{
-            //    config.pacPort = 8888;
-            //}
-            if (Utils.IsNullOrEmpty(config.speedPingTestUrl))
+
+            if (config.constItem == null)
             {
-                config.speedPingTestUrl = Global.SpeedPingTestUrl;
+                config.constItem = new ConstItem();
+            }
+            if (Utils.IsNullOrEmpty(config.constItem.speedTestUrl))
+            {
+                config.constItem.speedTestUrl = Global.SpeedTestUrl;
+            }
+            if (Utils.IsNullOrEmpty(config.constItem.speedPingTestUrl))
+            {
+                config.constItem.speedPingTestUrl = Global.SpeedPingTestUrl;
+            }
+            if (Utils.IsNullOrEmpty(config.constItem.defIEProxyExceptions))
+            {
+                config.constItem.defIEProxyExceptions = Global.IEProxyExceptions;
             }
             //if (Utils.IsNullOrEmpty(config.remoteDNS))
             //{
@@ -145,11 +152,17 @@ namespace v2rayN.Handler
             {
                 config.subItem = new List<SubItem>();
             }
+            if (config.groupItem == null)
+            {
+                config.groupItem = new List<GroupItem>();
+            }
+            if (config.statisticsFreshRate > 100 || config.statisticsFreshRate < 1)
+            {
+                config.statisticsFreshRate = 1;
+            }
 
             if (config == null
-                || config.index < 0
                 || config.vmess.Count <= 0
-                || config.index > config.vmess.Count - 1
                 )
             {
                 Global.reloadV2ray = false;
@@ -162,178 +175,18 @@ namespace v2rayN.Handler
                 for (int i = 0; i < config.vmess.Count; i++)
                 {
                     VmessItem vmessItem = config.vmess[i];
-                    if (vmessItem != null && vmessItem.configVersion != 2)
+                    UpgradeServerVersion(ref vmessItem);
+
+                    if (Utils.IsNullOrEmpty(vmessItem.indexId))
                     {
-                        UpgradeServerVersion(ref vmessItem);
+                        vmessItem.indexId = Utils.GetGUID(false);
                     }
                 }
             }
 
+            LazyConfig.Instance.SetConfig(ref config);
             return 0;
         }
-
-        #endregion
-
-        #region Server
-
-        /// <summary>
-        /// 添加服务器或编辑
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public static int AddServer(ref Config config, VmessItem vmessItem, int index)
-        {
-            vmessItem.configVersion = 2;
-            vmessItem.configType = (int)EConfigType.Vmess;
-
-            vmessItem.address = vmessItem.address.TrimEx();
-            vmessItem.id = vmessItem.id.TrimEx();
-            vmessItem.security = vmessItem.security.TrimEx();
-            vmessItem.network = vmessItem.network.TrimEx();
-            vmessItem.headerType = vmessItem.headerType.TrimEx();
-            vmessItem.requestHost = vmessItem.requestHost.TrimEx();
-            vmessItem.path = vmessItem.path.TrimEx();
-            vmessItem.streamSecurity = vmessItem.streamSecurity.TrimEx();
-
-            if (index >= 0)
-            {
-                //修改
-                config.vmess[index] = vmessItem;
-                if (config.index.Equals(index))
-                {
-                    Global.reloadV2ray = true;
-                }
-            }
-            else
-            {
-                //添加
-                if (Utils.IsNullOrEmpty(vmessItem.allowInsecure))
-                {
-                    vmessItem.allowInsecure = config.defAllowInsecure.ToString();
-                }
-                config.vmess.Add(vmessItem);
-                if (config.vmess.Count == 1)
-                {
-                    config.index = 0;
-                    Global.reloadV2ray = true;
-                }
-            }
-
-            ToJsonFile(config);
-
-            return 0;
-        }
-
-        /// <summary>
-        /// 移除服务器
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public static int RemoveServer(ref Config config, int index)
-        {
-            if (index < 0 || index > config.vmess.Count - 1)
-            {
-                return -1;
-            }
-
-            //删除
-            config.vmess.RemoveAt(index);
-
-
-            //移除的是活动的
-            if (config.index.Equals(index))
-            {
-                if (config.vmess.Count > 0)
-                {
-                    config.index = 0;
-                }
-                else
-                {
-                    config.index = -1;
-                }
-                Global.reloadV2ray = true;
-            }
-            else if (index < config.index)//移除活动之前的
-            {
-                config.index--;
-                Global.reloadV2ray = true;
-            }
-
-            ToJsonFile(config);
-
-            return 0;
-        }
-
-        /// <summary>
-        /// 克隆服务器
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public static int CopyServer(ref Config config, int index)
-        {
-            if (index < 0 || index > config.vmess.Count - 1)
-            {
-                return -1;
-            }
-
-            VmessItem vmessItem = new VmessItem
-            {
-                configVersion = config.vmess[index].configVersion,
-                address = config.vmess[index].address,
-                port = config.vmess[index].port,
-                id = config.vmess[index].id,
-                alterId = config.vmess[index].alterId,
-                security = config.vmess[index].security,
-                network = config.vmess[index].network,
-                remarks = string.Format("{0}-clone", config.vmess[index].remarks),
-                headerType = config.vmess[index].headerType,
-                requestHost = config.vmess[index].requestHost,
-                path = config.vmess[index].path,
-                streamSecurity = config.vmess[index].streamSecurity,
-                allowInsecure = config.vmess[index].allowInsecure,
-                configType = config.vmess[index].configType,
-                flow = config.vmess[index].flow,
-                sni = config.vmess[index].sni,
-                muxEnabled = config.vmess[index].muxEnabled
-            };
-
-            config.vmess.Insert(index + 1, vmessItem); // 插入到下一项
-
-            ToJsonFile(config);
-
-            return 0;
-        }
-
-        /// <summary>
-        /// 设置活动服务器
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public static int SetDefaultServer(ref Config config, int index)
-        {
-            if (index < 0 || index > config.vmess.Count - 1)
-            {
-                return -1;
-            }
-
-            ////和现在相同
-            //if (config.index.Equals(index))
-            //{
-            //    return -1;
-            //}
-            config.index = index;
-            Global.reloadV2ray = true;
-
-            ToJsonFile(config);
-
-            return 0;
-        }
-
         /// <summary>
         /// 保参数
         /// </summary>
@@ -354,23 +207,202 @@ namespace v2rayN.Handler
         /// <param name="config"></param>
         private static void ToJsonFile(Config config)
         {
-            Utils.ToJsonFile(config, Utils.GetPath(configRes));
+            lock (objLock)
+            {
+                try
+                {
+
+                    //save temp file
+                    var resPath = Utils.GetPath(configRes);
+                    var tempPath = $"{resPath}_temp";
+                    if (Utils.ToJsonFile(config, tempPath) != 0)
+                    {
+                        return;
+                    }
+
+                    if (File.Exists(resPath))
+                    {
+                        File.Delete(resPath);
+                    }
+                    //rename
+                    File.Move(tempPath, resPath);
+                }
+                catch (Exception ex)
+                {
+                    Utils.SaveLog("ToJsonFile", ex);
+                }
+            }
+        }
+
+        #endregion
+
+        #region Server
+
+        /// <summary>
+        /// 添加服务器或编辑
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="vmessItem"></param>
+        /// <returns></returns>
+        public static int AddServer(ref Config config, VmessItem vmessItem, bool toFile = true)
+        {
+            vmessItem.configType = EConfigType.VMess;
+
+            vmessItem.address = vmessItem.address.TrimEx();
+            vmessItem.id = vmessItem.id.TrimEx();
+            vmessItem.security = vmessItem.security.TrimEx();
+            vmessItem.network = vmessItem.network.TrimEx();
+            vmessItem.headerType = vmessItem.headerType.TrimEx();
+            vmessItem.requestHost = vmessItem.requestHost.TrimEx();
+            vmessItem.path = vmessItem.path.TrimEx();
+            vmessItem.streamSecurity = vmessItem.streamSecurity.TrimEx();
+
+            if (!Global.vmessSecuritys.Contains(vmessItem.security))
+            {
+                return -1;
+            }
+
+            AddServerCommon(ref config, vmessItem);
+
+            if (toFile)
+            {
+                ToJsonFile(config);
+            }
+            return 0;
+        }
+
+        /// <summary>
+        /// 移除服务器
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="indexs"></param>
+        /// <returns></returns>
+        public static int RemoveServer(Config config, List<VmessItem> indexs)
+        {
+            foreach (var item in indexs)
+            {
+                var index = config.FindIndexId(item.indexId);
+                if (index >= 0)
+                {
+                    RemoveVmessItem(config, index);
+                }
+            }
+
+            ToJsonFile(config);
+
+            return 0;
+        }
+
+        /// <summary>
+        /// 克隆服务器
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="index"></param>
+        /// <returns></returns>
+        public static int CopyServer(ref Config config, List<VmessItem> indexs)
+        {
+            foreach (var item in indexs)
+            {
+                VmessItem vmessItem = Utils.DeepCopy(item);
+                vmessItem.indexId = string.Empty;
+                vmessItem.remarks = $"{item.remarks}-clone";
+
+                if (vmessItem.configType == EConfigType.Custom)
+                {
+                    vmessItem.address = Utils.GetConfigPath(vmessItem.address);
+                    if (AddCustomServer(ref config, vmessItem, false) == 0)
+                    {
+                    }
+                }
+                else
+                {
+                    AddServerCommon(ref config, vmessItem);
+                }
+            }
+
+            ToJsonFile(config);
+
+            return 0;
+        }
+
+        /// <summary>
+        /// 设置活动服务器
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="item"></param>
+        /// <returns></returns>
+        public static int SetDefaultServer(ref Config config, VmessItem item)
+        {
+            if (item == null)
+            {
+                return -1;
+            }
+
+            config.indexId = item.indexId;
+            Global.reloadV2ray = true;
+
+            ToJsonFile(config);
+
+            return 0;
+        }
+
+        public static int SetDefaultServer(Config config, List<VmessItem> lstVmess)
+        {
+            if (lstVmess.Exists(t => t.indexId == config.indexId))
+            {
+                return 0;
+            }
+            if (config.vmess.Exists(t => t.indexId == config.indexId))
+            {
+                return 0;
+            }
+            if (lstVmess.Count > 0)
+            {
+                return SetDefaultServer(ref config, lstVmess[0]);
+            }
+            if (config.vmess.Count > 0)
+            {
+                return SetDefaultServer(ref config, config.vmess[0]);
+            }
+            return -1;
+        }
+        public static VmessItem GetDefaultServer(ref Config config)
+        {
+            if (config.vmess.Count <= 0)
+            {
+                return null;
+            }
+            var index = config.FindIndexId(config.indexId);
+            if (index < 0)
+            {
+                SetDefaultServer(ref config, config.vmess[0]);
+                return config.vmess[0];
+            }
+
+            return config.vmess[index];
         }
 
         /// <summary>
         /// 移动服务器
         /// </summary>
         /// <param name="config"></param>
+        /// <param name="lstVmess"></param>
         /// <param name="index"></param>
         /// <param name="eMove"></param>
         /// <returns></returns>
-        public static int MoveServer(ref Config config, int index, EMove eMove)
+        public static int MoveServer(ref Config config, ref List<VmessItem> lstVmess, int index, EMove eMove, int pos = -1)
         {
-            int count = config.vmess.Count;
-            if (index < 0 || index > config.vmess.Count - 1)
+            int count = lstVmess.Count;
+            if (index < 0 || index > lstVmess.Count - 1)
             {
                 return -1;
             }
+
+            for (int i = 0; i < lstVmess.Count; i++)
+            {
+                lstVmess[i].sort = (i + 1) * 10;
+            }
+
             switch (eMove)
             {
                 case EMove.Top:
@@ -379,21 +411,8 @@ namespace v2rayN.Handler
                         {
                             return 0;
                         }
-                        VmessItem vmess = Utils.DeepCopy(config.vmess[index]);
-                        config.vmess.RemoveAt(index);
-                        config.vmess.Insert(0, vmess);
-                        if (index < config.index)
-                        {
-                            //
-                        }
-                        else if (config.index == index)
-                        {
-                            config.index = 0;
-                        }
-                        else
-                        {
-                            config.index++;
-                        }
+                        lstVmess[index].sort = lstVmess[0].sort - 1;
+
                         break;
                     }
                 case EMove.Up:
@@ -402,17 +421,8 @@ namespace v2rayN.Handler
                         {
                             return 0;
                         }
-                        VmessItem vmess = Utils.DeepCopy(config.vmess[index]);
-                        config.vmess.RemoveAt(index);
-                        config.vmess.Insert(index - 1, vmess);
-                        if (index == config.index + 1)
-                        {
-                            config.index++;
-                        }
-                        else if (config.index == index)
-                        {
-                            config.index--;
-                        }
+                        lstVmess[index].sort = lstVmess[index - 1].sort - 1;
+
                         break;
                     }
 
@@ -422,17 +432,8 @@ namespace v2rayN.Handler
                         {
                             return 0;
                         }
-                        VmessItem vmess = Utils.DeepCopy(config.vmess[index]);
-                        config.vmess.RemoveAt(index);
-                        config.vmess.Insert(index + 1, vmess);
-                        if (index == config.index - 1)
-                        {
-                            config.index--;
-                        }
-                        else if (config.index == index)
-                        {
-                            config.index++;
-                        }
+                        lstVmess[index].sort = lstVmess[index + 1].sort + 1;
+
                         break;
                     }
                 case EMove.Bottom:
@@ -441,26 +442,14 @@ namespace v2rayN.Handler
                         {
                             return 0;
                         }
-                        VmessItem vmess = Utils.DeepCopy(config.vmess[index]);
-                        config.vmess.RemoveAt(index);
-                        config.vmess.Add(vmess);
-                        if (index < config.index)
-                        {
-                            config.index--;
-                        }
-                        else if (config.index == index)
-                        {
-                            config.index = count - 1;
-                        }
-                        else
-                        {
-                            //
-                        }
+                        lstVmess[index].sort = lstVmess[lstVmess.Count - 1].sort + 1;
+
                         break;
                     }
-
+                case EMove.Position:
+                    lstVmess[index].sort = pos * 10 + 1;
+                    break;
             }
-            Global.reloadV2ray = true;
 
             ToJsonFile(config);
 
@@ -471,35 +460,42 @@ namespace v2rayN.Handler
         /// 添加自定义服务器
         /// </summary>
         /// <param name="config"></param>
-        /// <param name="fileName"></param>
+        /// <param name="vmessItem"></param>
         /// <returns></returns>
-        public static int AddCustomServer(ref Config config, string fileName)
+        public static int AddCustomServer(ref Config config, VmessItem vmessItem, bool blDelete)
         {
-            string newFileName = string.Format("{0}.json", Utils.GetGUID());
+            var fileName = vmessItem.address;
+            if (!File.Exists(fileName))
+            {
+                return -1;
+            }
+            var ext = Path.GetExtension(fileName);
+            string newFileName = $"{Utils.GetGUID()}{ext}";
             //newFileName = Path.Combine(Utils.GetTempPath(), newFileName);
 
             try
             {
-                File.Copy(fileName, Path.Combine(Utils.GetTempPath(), newFileName));
+                File.Copy(fileName, Utils.GetConfigPath(newFileName));
+                if (blDelete)
+                {
+                    File.Delete(fileName);
+                }
             }
-            catch
+            catch (Exception ex)
             {
+                Utils.SaveLog(ex.Message, ex);
                 return -1;
             }
 
-            VmessItem vmessItem = new VmessItem
+            vmessItem.address = newFileName;
+            vmessItem.configType = EConfigType.Custom;
+            if (Utils.IsNullOrEmpty(vmessItem.remarks))
             {
-                address = newFileName,
-                configType = (int)EConfigType.Custom,
-                remarks = string.Format("import custom@{0}", DateTime.Now.ToShortDateString())
-            };
-
-            config.vmess.Add(vmessItem);
-            if (config.vmess.Count == 1)
-            {
-                config.index = 0;
-                Global.reloadV2ray = true;
+                vmessItem.remarks = $"import custom@{DateTime.Now.ToShortDateString()}";
             }
+
+
+            AddServerCommon(ref config, vmessItem);
 
             ToJsonFile(config);
 
@@ -511,17 +507,9 @@ namespace v2rayN.Handler
         /// </summary>
         /// <param name="config"></param>
         /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
         /// <returns></returns>
-        public static int EditCustomServer(ref Config config, VmessItem vmessItem, int index)
+        public static int EditCustomServer(ref Config config, VmessItem vmessItem)
         {
-            //修改
-            config.vmess[index] = vmessItem;
-            if (config.index.Equals(index))
-            {
-                Global.reloadV2ray = true;
-            }
-
             ToJsonFile(config);
 
             return 0;
@@ -532,43 +520,26 @@ namespace v2rayN.Handler
         /// </summary>
         /// <param name="config"></param>
         /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
         /// <returns></returns>
-        public static int AddShadowsocksServer(ref Config config, VmessItem vmessItem, int index)
+        public static int AddShadowsocksServer(ref Config config, VmessItem vmessItem, bool toFile = true)
         {
-            vmessItem.configVersion = 2;
-            vmessItem.configType = (int)EConfigType.Shadowsocks;
+            vmessItem.configType = EConfigType.Shadowsocks;
 
             vmessItem.address = vmessItem.address.TrimEx();
             vmessItem.id = vmessItem.id.TrimEx();
             vmessItem.security = vmessItem.security.TrimEx();
 
-            if (!Global.ssSecuritys.Contains(vmessItem.security))
+            if (!LazyConfig.Instance.GetShadowsocksSecuritys(vmessItem).Contains(vmessItem.security))
             {
                 return -1;
             }
 
-            if (index >= 0)
-            {
-                //修改
-                config.vmess[index] = vmessItem;
-                if (config.index.Equals(index))
-                {
-                    Global.reloadV2ray = true;
-                }
-            }
-            else
-            {
-                //添加
-                config.vmess.Add(vmessItem);
-                if (config.vmess.Count == 1)
-                {
-                    config.index = 0;
-                    Global.reloadV2ray = true;
-                }
-            }
+            AddServerCommon(ref config, vmessItem);
 
-            ToJsonFile(config);
+            if (toFile)
+            {
+                ToJsonFile(config);
+            }
 
             return 0;
         }
@@ -578,83 +549,50 @@ namespace v2rayN.Handler
         /// </summary>
         /// <param name="config"></param>
         /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
         /// <returns></returns>
-        public static int AddSocksServer(ref Config config, VmessItem vmessItem, int index)
+        public static int AddSocksServer(ref Config config, VmessItem vmessItem, bool toFile = true)
         {
-            vmessItem.configVersion = 2;
-            vmessItem.configType = (int)EConfigType.Socks;
+            vmessItem.configType = EConfigType.Socks;
 
             vmessItem.address = vmessItem.address.TrimEx();
 
-            if (index >= 0)
-            {
-                //修改
-                config.vmess[index] = vmessItem;
-                if (config.index.Equals(index))
-                {
-                    Global.reloadV2ray = true;
-                }
-            }
-            else
-            {
-                //添加
-                config.vmess.Add(vmessItem);
-                if (config.vmess.Count == 1)
-                {
-                    config.index = 0;
-                    Global.reloadV2ray = true;
-                }
-            }
+            AddServerCommon(ref config, vmessItem);
 
-            ToJsonFile(config);
+            if (toFile)
+            {
+                ToJsonFile(config);
+            }
 
             return 0;
         }
-
 
         /// <summary>
         /// 添加服务器或编辑
         /// </summary>
         /// <param name="config"></param>
         /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
         /// <returns></returns>
-        public static int AddTrojanServer(ref Config config, VmessItem vmessItem, int index)
+        public static int AddTrojanServer(ref Config config, VmessItem vmessItem, bool toFile = true)
         {
-            vmessItem.configVersion = 2;
-            vmessItem.configType = (int)EConfigType.Trojan;
+            vmessItem.configType = EConfigType.Trojan;
 
             vmessItem.address = vmessItem.address.TrimEx();
             vmessItem.id = vmessItem.id.TrimEx();
-
-            vmessItem.streamSecurity = Global.StreamSecurity;
+            if (Utils.IsNullOrEmpty(vmessItem.streamSecurity))
+            {
+                vmessItem.streamSecurity = Global.StreamSecurity;
+            }
             if (Utils.IsNullOrEmpty(vmessItem.allowInsecure))
             {
                 vmessItem.allowInsecure = config.defAllowInsecure.ToString();
             }
 
-            if (index >= 0)
-            {
-                //修改
-                config.vmess[index] = vmessItem;
-                if (config.index.Equals(index))
-                {
-                    Global.reloadV2ray = true;
-                }
-            }
-            else
-            {
-                //添加
-                config.vmess.Add(vmessItem);
-                if (config.vmess.Count == 1)
-                {
-                    config.index = 0;
-                    Global.reloadV2ray = true;
-                }
-            }
+            AddServerCommon(ref config, vmessItem);
 
-            ToJsonFile(config);
+            if (toFile)
+            {
+                ToJsonFile(config);
+            }
 
             return 0;
         }
@@ -673,7 +611,7 @@ namespace v2rayN.Handler
                 {
                     return 0;
                 }
-                if (vmessItem.configType == (int)EConfigType.Vmess)
+                if (vmessItem.configType == EConfigType.VMess)
                 {
                     string path = "";
                     string host = "";
@@ -724,6 +662,185 @@ namespace v2rayN.Handler
             return 0;
         }
 
+        public static int SortServers(ref Config config, ref List<VmessItem> lstVmess, EServerColName name, bool asc)
+        {
+            if (lstVmess.Count <= 0)
+            {
+                return -1;
+            }
+            var propertyName = string.Empty;
+            switch (name)
+            {
+                case EServerColName.configType:
+                case EServerColName.remarks:
+                case EServerColName.address:
+                case EServerColName.port:
+                case EServerColName.security:
+                case EServerColName.network:
+                case EServerColName.streamSecurity:
+                case EServerColName.testResult:
+                    propertyName = name.ToString();
+                    break;
+                case EServerColName.subRemarks:
+                    propertyName = "subid";
+                    break;
+                default:
+                    return -1;
+            }
+
+            var items = lstVmess.AsQueryable();
+
+            if (asc)
+            {
+                lstVmess = items.OrderBy(propertyName).ToList();
+            }
+            else
+            {
+                lstVmess = items.OrderByDescending(propertyName).ToList();
+            }
+            for (int i = 0; i < lstVmess.Count; i++)
+            {
+                lstVmess[i].sort = (i + 1) * 10;
+            }
+
+            ToJsonFile(config);
+            return 0;
+        }
+
+        /// <summary>
+        /// 添加服务器或编辑
+        /// </summary>
+        /// <param name="config"></param>
+        /// <param name="vmessItem"></param>
+        /// <returns></returns>
+        public static int AddVlessServer(ref Config config, VmessItem vmessItem, bool toFile = true)
+        {
+            vmessItem.configType = EConfigType.VLESS;
+
+            vmessItem.address = vmessItem.address.TrimEx();
+            vmessItem.id = vmessItem.id.TrimEx();
+            vmessItem.security = vmessItem.security.TrimEx();
+            vmessItem.network = vmessItem.network.TrimEx();
+            vmessItem.headerType = vmessItem.headerType.TrimEx();
+            vmessItem.requestHost = vmessItem.requestHost.TrimEx();
+            vmessItem.path = vmessItem.path.TrimEx();
+            vmessItem.streamSecurity = vmessItem.streamSecurity.TrimEx();
+
+            AddServerCommon(ref config, vmessItem);
+
+            if (toFile)
+            {
+                ToJsonFile(config);
+            }
+
+            return 0;
+        }
+
+        public static int DedupServerList(ref Config config, ref List<VmessItem> lstVmess)
+        {
+            List<VmessItem> source = lstVmess;
+            bool keepOlder = config.keepOlderDedupl;
+
+            List<VmessItem> list = new List<VmessItem>();
+            if (!keepOlder) source.Reverse(); // Remove the early items first
+
+            foreach (VmessItem item in source)
+            {
+                if (!list.Exists(i => CompareVmessItem(i, item, false)))
+                {
+                    list.Add(item);
+                }
+                else
+                {
+                    var index = config.FindIndexId(item.indexId);
+                    if (index >= 0)
+                    {
+                        RemoveVmessItem(config, index);
+                    }
+                }
+            }
+            //if (!keepOlder) list.Reverse();
+            //config.vmess = list;
+
+            return list.Count;
+        }
+
+        public static int AddServerCommon(ref Config config, VmessItem vmessItem)
+        {
+            vmessItem.configVersion = 2;
+            if (Utils.IsNullOrEmpty(vmessItem.allowInsecure))
+            {
+                vmessItem.allowInsecure = config.defAllowInsecure.ToString();
+            }
+            if (!Utils.IsNullOrEmpty(vmessItem.network) && !Global.networks.Contains(vmessItem.network))
+            {
+                vmessItem.network = Global.DefaultNetwork;
+            }
+
+            if (Utils.IsNullOrEmpty(vmessItem.indexId))
+            {
+                vmessItem.indexId = Utils.GetGUID(false);
+            }
+            else if (vmessItem.indexId == config.indexId)
+            {
+                Global.reloadV2ray = true;
+            }
+            if (!config.vmess.Exists(it => it.indexId == vmessItem.indexId))
+            {
+                var maxSort = config.vmess.Any() ? config.vmess.Max(t => t.sort) : 0;
+                vmessItem.sort = maxSort++;
+
+                config.vmess.Add(vmessItem);
+            }
+
+            return 0;
+        }
+
+        private static bool CompareVmessItem(VmessItem o, VmessItem n, bool remarks)
+        {
+            if (o == null || n == null)
+            {
+                return false;
+            }
+
+            return o.configVersion == n.configVersion
+                && o.configType == n.configType
+                && o.address == n.address
+                && o.port == n.port
+                && o.id == n.id
+                && o.alterId == n.alterId
+                && o.security == n.security
+                && o.network == n.network
+                && o.headerType == n.headerType
+                && o.requestHost == n.requestHost
+                && o.path == n.path
+                && (o.configType == EConfigType.Trojan || o.streamSecurity == n.streamSecurity)
+                && o.flow == n.flow
+                && o.sni == n.sni
+                && (!remarks || o.remarks == n.remarks);
+        }
+
+        private static int RemoveVmessItem(Config config, int index)
+        {
+            try
+            {
+                if (config.vmess[index].configType == EConfigType.Custom)
+                {
+                    File.Delete(Utils.GetConfigPath(config.vmess[index].address));
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.SaveLog("RemoveVmessItem", ex);
+            }
+            config.vmess.RemoveAt(index);
+
+            return 0;
+        }
+        #endregion
+
+        #region Batch add servers
+
         /// <summary>
         /// 批量添加服务器
         /// </summary>
@@ -731,11 +848,17 @@ namespace v2rayN.Handler
         /// <param name="clipboardData"></param>
         /// <param name="subid"></param>
         /// <returns>成功导入的数量</returns>
-        public static int AddBatchServers(ref Config config, string clipboardData, string subid = "")
+        private static int AddBatchServers(ref Config config, string clipboardData, string subid, List<VmessItem> lstOriSub, string groupId)
         {
             if (Utils.IsNullOrEmpty(clipboardData))
             {
                 return -1;
+            }
+
+            //copy sub items
+            if (!Utils.IsNullOrEmpty(subid))
+            {
+                RemoveServerViaSubid(ref config, subid);
             }
             //if (clipboardData.IndexOf("vmess") >= 0 && clipboardData.IndexOf("vmess") == clipboardData.LastIndexOf("vmess"))
             //{
@@ -748,7 +871,7 @@ namespace v2rayN.Handler
             foreach (string str in arrData)
             {
                 //maybe sub
-                if (str.StartsWith(Global.httpsProtocol) || str.StartsWith(Global.httpProtocol))
+                if (Utils.IsNullOrEmpty(subid) && (str.StartsWith(Global.httpsProtocol) || str.StartsWith(Global.httpProtocol)))
                 {
                     if (AddSubItem(ref config, str) == 0)
                     {
@@ -761,45 +884,245 @@ namespace v2rayN.Handler
                 {
                     continue;
                 }
-                vmessItem.subid = subid;
-                if (vmessItem.configType == (int)EConfigType.Vmess)
+
+                //exist sub items
+                if (!Utils.IsNullOrEmpty(subid))
                 {
-                    if (AddServer(ref config, vmessItem, -1) == 0)
+                    var existItem = lstOriSub?.FirstOrDefault(t => CompareVmessItem(t, vmessItem, true));
+                    if (existItem != null)
+                    {
+                        vmessItem = existItem;
+                    }
+                    vmessItem.subid = subid;
+                }
+
+                //groupId
+                vmessItem.groupId = groupId;
+
+                if (vmessItem.configType == EConfigType.VMess)
+                {
+                    if (AddServer(ref config, vmessItem, false) == 0)
                     {
                         countServers++;
                     }
                 }
-                else if (vmessItem.configType == (int)EConfigType.Shadowsocks)
+                else if (vmessItem.configType == EConfigType.Shadowsocks)
                 {
-                    if (AddShadowsocksServer(ref config, vmessItem, -1) == 0)
+                    if (AddShadowsocksServer(ref config, vmessItem, false) == 0)
                     {
                         countServers++;
                     }
                 }
-                else if (vmessItem.configType == (int)EConfigType.Socks)
+                else if (vmessItem.configType == EConfigType.Socks)
                 {
-                    if (AddSocksServer(ref config, vmessItem, -1) == 0)
+                    if (AddSocksServer(ref config, vmessItem, false) == 0)
                     {
                         countServers++;
                     }
                 }
-                else if (vmessItem.configType == (int)EConfigType.Trojan)
+                else if (vmessItem.configType == EConfigType.Trojan)
                 {
-                    if (AddTrojanServer(ref config, vmessItem, -1) == 0)
+                    if (AddTrojanServer(ref config, vmessItem, false) == 0)
                     {
                         countServers++;
                     }
                 }
-                else if (vmessItem.configType == (int)EConfigType.VLESS)
+                else if (vmessItem.configType == EConfigType.VLESS)
                 {
-                    if (AddVlessServer(ref config, vmessItem, -1) == 0)
+                    if (AddVlessServer(ref config, vmessItem, false) == 0)
                     {
                         countServers++;
                     }
                 }
             }
+
+            ToJsonFile(config);
             return countServers;
         }
+
+        private static int AddBatchServers4Custom(ref Config config, string clipboardData, string subid, List<VmessItem> lstOriSub, string groupId)
+        {
+            if (Utils.IsNullOrEmpty(clipboardData))
+            {
+                return -1;
+            }
+
+            VmessItem vmessItem = new VmessItem();
+            //Is v2ray configuration
+            V2rayConfig v2rayConfig = Utils.FromJson<V2rayConfig>(clipboardData);
+            if (v2rayConfig != null
+                && v2rayConfig.inbounds != null
+                && v2rayConfig.inbounds.Count > 0
+                && v2rayConfig.outbounds != null
+                && v2rayConfig.outbounds.Count > 0)
+            {
+                var fileName = Utils.GetTempPath($"{Utils.GetGUID(false)}.json");
+                File.WriteAllText(fileName, clipboardData);
+
+                vmessItem.coreType = ECoreType.Xray;
+                vmessItem.address = fileName;
+                vmessItem.remarks = "v2ray_custom";
+            }
+            //Is Clash configuration
+            else if (clipboardData.IndexOf("port") >= 0
+                && clipboardData.IndexOf("socks-port") >= 0
+                && clipboardData.IndexOf("proxies") >= 0)
+            {
+                var fileName = Utils.GetTempPath($"{Utils.GetGUID(false)}.yaml");
+                File.WriteAllText(fileName, clipboardData);
+
+                vmessItem.coreType = ECoreType.clash;
+                vmessItem.address = fileName;
+                vmessItem.remarks = "clash_custom";
+            }
+            //Is hysteria configuration
+            else if (clipboardData.IndexOf("server") >= 0
+                && clipboardData.IndexOf("up") >= 0
+                && clipboardData.IndexOf("down") >= 0
+                && clipboardData.IndexOf("listen") >= 0
+                && clipboardData.IndexOf("<html>") < 0
+                && clipboardData.IndexOf("<body>") < 0)
+            {
+                var fileName = Utils.GetTempPath($"{Utils.GetGUID(false)}.json");
+                File.WriteAllText(fileName, clipboardData);
+
+                vmessItem.coreType = ECoreType.hysteria;
+                vmessItem.address = fileName;
+                vmessItem.remarks = "hysteria_custom";
+            }
+            //Is naiveproxy configuration
+            else if (clipboardData.IndexOf("listen") >= 0
+                && clipboardData.IndexOf("proxy") >= 0
+                && clipboardData.IndexOf("<html>") < 0
+                && clipboardData.IndexOf("<body>") < 0)
+            {
+                var fileName = Utils.GetTempPath($"{Utils.GetGUID(false)}.json");
+                File.WriteAllText(fileName, clipboardData);
+
+                vmessItem.coreType = ECoreType.naiveproxy;
+                vmessItem.address = fileName;
+                vmessItem.remarks = "naiveproxy_custom";
+            }
+            //Is Other configuration
+            else
+            {
+                return -1;
+                //var fileName = Utils.GetTempPath($"{Utils.GetGUID(false)}.txt");
+                //File.WriteAllText(fileName, clipboardData);
+
+                //vmessItem.address = fileName;
+                //vmessItem.remarks = "other_custom";
+            }
+
+            if (!Utils.IsNullOrEmpty(subid))
+            {
+                RemoveServerViaSubid(ref config, subid);
+            }
+            if (lstOriSub != null && lstOriSub.Count == 1)
+            {
+                vmessItem.indexId = lstOriSub[0].indexId;
+            }
+            vmessItem.subid = subid;
+            vmessItem.groupId = groupId;
+
+            if (Utils.IsNullOrEmpty(vmessItem.address))
+            {
+                return -1;
+            }
+
+            if (AddCustomServer(ref config, vmessItem, true) == 0)
+            {
+                return 1;
+
+            }
+            else
+            {
+                return -1;
+            }
+        }
+
+        private static int AddBatchServers4SsSIP008(ref Config config, string clipboardData, string subid, List<VmessItem> lstOriSub, string groupId)
+        {
+            if (Utils.IsNullOrEmpty(clipboardData))
+            {
+                return -1;
+            }
+
+            if (!Utils.IsNullOrEmpty(subid))
+            {
+                RemoveServerViaSubid(ref config, subid);
+            }
+
+            //SsSIP008
+            var lstSsServer = Utils.FromJson<List<SsServer>>(clipboardData);
+            if (lstSsServer == null || lstSsServer.Count <= 0)
+            {
+                var ssSIP008 = Utils.FromJson<SsSIP008>(clipboardData);
+                if (ssSIP008?.servers != null && ssSIP008.servers.Count > 0)
+                {
+                    lstSsServer = ssSIP008.servers;
+                }
+            }
+
+            if (lstSsServer != null && lstSsServer.Count > 0)
+            {
+                int counter = 0;
+                foreach (var it in lstSsServer)
+                {
+                    var ssItem = new VmessItem()
+                    {
+                        subid = subid,
+                        groupId = groupId,
+                        remarks = it.remarks,
+                        security = it.method,
+                        id = it.password,
+                        address = it.server,
+                        port = Utils.ToInt(it.server_port)
+                    };
+                    if (AddShadowsocksServer(ref config, ssItem, false) == 0)
+                    {
+                        counter++;
+                    }
+                }
+                ToJsonFile(config);
+                return counter;
+            }
+
+            return -1;
+        }
+
+        public static int AddBatchServers(ref Config config, string clipboardData, string subid, string groupId)
+        {
+            List<VmessItem> lstOriSub = null;
+            if (!Utils.IsNullOrEmpty(subid))
+            {
+                lstOriSub = config.vmess.Where(it => it.subid == subid).ToList();
+            }
+
+            int counter = AddBatchServers(ref config, clipboardData, subid, lstOriSub, groupId);
+            if (counter < 1)
+            {
+                counter = AddBatchServers(ref config, Utils.Base64Decode(clipboardData), subid, lstOriSub, groupId);
+            }
+
+            if (counter < 1)
+            {
+                counter = AddBatchServers4SsSIP008(ref config, clipboardData, subid, lstOriSub, groupId);
+            }
+
+            //maybe other sub 
+            if (counter < 1)
+            {
+                counter = AddBatchServers4Custom(ref config, clipboardData, subid, lstOriSub, groupId);
+            }
+
+            return counter;
+        }
+
+
+        #endregion
+
+        #region Sub & Group
 
         /// <summary>
         /// add sub
@@ -810,12 +1133,9 @@ namespace v2rayN.Handler
         public static int AddSubItem(ref Config config, string url)
         {
             //already exists
-            foreach (SubItem sub in config.subItem)
+            if (config.subItem.FindIndex(e => e.url == url) >= 0)
             {
-                if (url == sub.url)
-                {
-                    return 0;
-                }
+                return 0;
             }
 
             SubItem subItem = new SubItem
@@ -836,17 +1156,14 @@ namespace v2rayN.Handler
         /// <returns></returns>
         public static int SaveSubItem(ref Config config)
         {
-            if (config.subItem == null || config.subItem.Count <= 0)
+            if (config.subItem == null)
             {
                 return -1;
             }
 
-            foreach (SubItem sub in config.subItem)
+            foreach (var item in config.subItem.Where(item => Utils.IsNullOrEmpty(item.id)))
             {
-                if (Utils.IsNullOrEmpty(sub.id))
-                {
-                    sub.id = Utils.GetGUID();
-                }
+                item.id = Utils.GetGUID(false);
             }
 
             ToJsonFile(config);
@@ -869,7 +1186,7 @@ namespace v2rayN.Handler
             {
                 if (config.vmess[k].subid.Equals(subid))
                 {
-                    config.vmess.RemoveAt(k);
+                    RemoveVmessItem(config, k);
                 }
             }
 
@@ -877,97 +1194,66 @@ namespace v2rayN.Handler
             return 0;
         }
 
-        public static int SortServers(ref Config config, EServerColName name, bool asc)
+
+        /// <summary>
+        /// save Group
+        /// </summary>
+        /// <param name="config"></param>
+        /// <returns></returns>
+        public static int SaveGroupItem(ref Config config)
         {
-            if (config.vmess.Count <= 0)
+            if (config.groupItem == null)
             {
                 return -1;
             }
-            switch (name)
-            {
-                case EServerColName.configType:
-                case EServerColName.remarks:
-                case EServerColName.address:
-                case EServerColName.port:
-                case EServerColName.security:
-                case EServerColName.network:
-                case EServerColName.testResult:
-                    break;
-                default:
-                    return -1;
-            }
-            string itemId = config.getItemId();
-            var items = config.vmess.AsQueryable();
 
-            if (asc)
+            foreach (var item in config.groupItem.Where(item => Utils.IsNullOrEmpty(item.id)))
             {
-                config.vmess = items.OrderBy(name.ToString()).ToList();
-            }
-            else
-            {
-                config.vmess = items.OrderByDescending(name.ToString()).ToList();
-            }
-
-            var index_ = config.vmess.FindIndex(it => it.getItemId() == itemId);
-            if (index_ >= 0)
-            {
-                config.index = index_;
+                item.id = Utils.GetGUID(false);
             }
 
             ToJsonFile(config);
             return 0;
         }
 
-        /// <summary>
-        /// 添加服务器或编辑
-        /// </summary>
-        /// <param name="config"></param>
-        /// <param name="vmessItem"></param>
-        /// <param name="index"></param>
-        /// <returns></returns>
-        public static int AddVlessServer(ref Config config, VmessItem vmessItem, int index)
+        public static int RemoveGroupItem(ref Config config, string groupId)
         {
-            vmessItem.configVersion = 2;
-            vmessItem.configType = (int)EConfigType.VLESS;
-
-            vmessItem.address = vmessItem.address.TrimEx();
-            vmessItem.id = vmessItem.id.TrimEx();
-            vmessItem.security = vmessItem.security.TrimEx();
-            vmessItem.network = vmessItem.network.TrimEx();
-            vmessItem.headerType = vmessItem.headerType.TrimEx();
-            vmessItem.requestHost = vmessItem.requestHost.TrimEx();
-            vmessItem.path = vmessItem.path.TrimEx();
-            vmessItem.streamSecurity = vmessItem.streamSecurity.TrimEx();
-
-            if (index >= 0)
+            if (Utils.IsNullOrEmpty(groupId))
             {
-                //修改
-                config.vmess[index] = vmessItem;
-                if (config.index.Equals(index))
+                return -1;
+            }
+
+            var items = config.vmess.Where(t => t.groupId == groupId).ToList();
+            foreach (var item in items)
+            {
+                if (item.groupId.Equals(groupId))
                 {
-                    Global.reloadV2ray = true;
+                    item.groupId = string.Empty;
                 }
             }
-            else
+            foreach (var item in config.subItem)
             {
-                //添加
-                if (Utils.IsNullOrEmpty(vmessItem.allowInsecure))
+                if (item.groupId.Equals(groupId))
                 {
-                    vmessItem.allowInsecure = config.defAllowInsecure.ToString();
+                    item.groupId = string.Empty;
                 }
-                config.vmess.Add(vmessItem);
-                if (config.vmess.Count == 1)
-                {
-                    config.index = 0;
-                    Global.reloadV2ray = true;
-                }
+            }
+
+            ToJsonFile(config);
+            return 0;
+        }
+
+        public static int MoveServerToGroup(Config config, List<VmessItem> indexs, string groupId)
+        {
+            foreach (var item in indexs)
+            {
+                item.groupId = groupId;
             }
 
             ToJsonFile(config);
 
             return 0;
         }
-
         #endregion
 
         #region UI
@@ -986,6 +1272,8 @@ namespace v2rayN.Handler
             {
                 config.uiItem.mainLvColWidth.Add(name, width);
             }
+
+            ToJsonFile(config);
             return 0;
         }
         public static int GetformMainLvColWidth(ref Config config, string name, int width)
@@ -1031,6 +1319,10 @@ namespace v2rayN.Handler
             {
                 config.routingIndex = 0;
             }
+            if (config.trayMenuServersLimit <= 0)
+            {
+                config.trayMenuServersLimit = 30;
+            }
 
             Global.reloadV2ray = true;
 
@@ -1047,6 +1339,13 @@ namespace v2rayN.Handler
             else
             {
                 config.routings.Add(item);
+                int indexLocked = config.routings.FindIndex(it => it.locked == true);
+                if (indexLocked != -1)
+                {
+                    var itemLocked = Utils.DeepCopy(config.routings[indexLocked]);
+                    config.routings.RemoveAt(indexLocked);
+                    config.routings.Add(itemLocked);
+                }
             }
             ToJsonFile(config);
 
@@ -1071,6 +1370,10 @@ namespace v2rayN.Handler
             {
                 return -1;
             }
+            if (routingItem.rules == null)
+            {
+                routingItem.rules = new List<RulesItem>();
+            }
             if (blReplace)
             {
                 routingItem.rules.Clear();
@@ -1089,7 +1392,7 @@ namespace v2rayN.Handler
         /// <param name="index"></param>
         /// <param name="eMove"></param>
         /// <returns></returns>
-        public static int MoveRoutingRule(ref RoutingItem routingItem, int index, EMove eMove)
+        public static int MoveRoutingRule(ref RoutingItem routingItem, int index, EMove eMove, int pos = -1)
         {
             int count = routingItem.rules.Count;
             if (index < 0 || index > routingItem.rules.Count - 1)
@@ -1147,6 +1450,14 @@ namespace v2rayN.Handler
 
                         break;
                     }
+                case EMove.Position:
+                    {
+                        var removeItem = routingItem.rules[index];
+                        var item = Utils.DeepCopy(routingItem.rules[index]);
+                        routingItem.rules.Insert(pos, item);
+                        routingItem.rules.Remove(removeItem);
+                        break;
+                    }
 
             }
             return 0;
@@ -1172,45 +1483,57 @@ namespace v2rayN.Handler
             return 0;
         }
 
-        public static int InitBuiltinRouting(ref Config config)
+        public static int InitBuiltinRouting(ref Config config, bool blImportAdvancedRules = false)
         {
             if (config.routings == null)
             {
                 config.routings = new List<RoutingItem>();
             }
 
-            if (config.routings.Count(it => it.locked != true) <= 0)
+            if (blImportAdvancedRules || config.routings.Count(it => it.locked != true) <= 0)
             {
-                //Global
-                var item1 = new RoutingItem();
-                item1.remarks = UIRes.I18N("DefaultGlobal");
-                item1.url = string.Empty;
-                item1.rules = new List<RulesItem>();
-                string result1 = Utils.GetEmbedText(Global.CustomRoutingFileName + "global");
-                AddBatchRoutingRules(ref item1, result1);
-                config.routings.Add(item1);
-
                 //Bypass the mainland
-                var item2 = new RoutingItem();
-                item2.remarks = UIRes.I18N("DefaultBypass");
-                item2.url = string.Empty;
-                item2.rules = new List<RulesItem>();
-                string result2 = Utils.GetEmbedText(Global.CustomRoutingFileName + "white");
-                AddBatchRoutingRules(ref item2, result2);
+                var item2 = new RoutingItem()
+                {
+                    remarks = "绕过大陆(Whitelist)",
+                    url = string.Empty,
+                };
+                AddBatchRoutingRules(ref item2, Utils.GetEmbedText(Global.CustomRoutingFileName + "white"));
                 config.routings.Add(item2);
 
-                config.routingIndex = 0;
+                //Blacklist
+                var item3 = new RoutingItem()
+                {
+                    remarks = "黑名单(Blacklist)",
+                    url = string.Empty,
+                };
+                AddBatchRoutingRules(ref item3, Utils.GetEmbedText(Global.CustomRoutingFileName + "black"));
+                config.routings.Add(item3);
+
+                //Global
+                var item1 = new RoutingItem()
+                {
+                    remarks = "全局(Global)",
+                    url = string.Empty,
+                };
+                AddBatchRoutingRules(ref item1, Utils.GetEmbedText(Global.CustomRoutingFileName + "global"));
+                config.routings.Add(item1);
+
+                if (!blImportAdvancedRules)
+                {
+                    config.routingIndex = 0;
+                }
             }
 
             if (GetLockedRoutingItem(ref config) == null)
             {
-                var item1 = new RoutingItem();
-                item1.remarks = "locked";
-                item1.url = string.Empty;
-                item1.rules = new List<RulesItem>();
-                item1.locked = true;
-                string result1 = Utils.GetEmbedText(Global.CustomRoutingFileName + "locked");
-                AddBatchRoutingRules(ref item1, result1);
+                var item1 = new RoutingItem()
+                {
+                    remarks = "locked",
+                    url = string.Empty,
+                    locked = true,
+                };
+                AddBatchRoutingRules(ref item1, Utils.GetEmbedText(Global.CustomRoutingFileName + "locked"));
                 config.routings.Add(item1);
             }
 

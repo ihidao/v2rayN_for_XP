@@ -1,12 +1,17 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Net;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
+using Newtonsoft.Json;
+using v2rayN.Base;
 using v2rayN.Mode;
+using v2rayN.Resx;
 
 namespace v2rayN.Handler
 {
@@ -24,23 +29,16 @@ namespace v2rayN.Handler
 
             public ResultEventArgs(bool success, string msg)
             {
-                this.Success = success;
-                this.Msg = msg;
+                Success = success;
+                Msg = msg;
             }
         }
 
-        private readonly string nLatestUrl = Global.NUrl + "/latest";
-        private const string nUrl = Global.NUrl + "/download/{0}/v2rayN.zip";
-        private readonly string v2flyCoreLatestUrl = Global.v2flyCoreUrl + "/latest";
-        private const string v2flyCoreUrl = Global.v2flyCoreUrl + "/download/{0}/v2ray-windows-{1}.zip";
-        private readonly string xrayCoreLatestUrl = Global.xrayCoreUrl + "/latest";
-        private const string xrayCoreUrl = Global.xrayCoreUrl + "/download/{0}/Xray-windows-{1}.zip";
-        private const string geoUrl = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/{0}.dat";
-
-        public void CheckUpdateGuiN(Config config, Action<bool, string> update)
+        public void CheckUpdateGuiN(Config config, Action<bool, string> update, bool preRelease)
         {
             _config = config;
             _updateFunc = update;
+            var url = string.Empty;
 
             DownloadHandle downloadHandle = null;
             if (downloadHandle == null)
@@ -51,11 +49,12 @@ namespace v2rayN.Handler
                 {
                     if (args.Success)
                     {
-                        _updateFunc(false, UIRes.I18N("MsgDownloadV2rayCoreSuccessfully"));
+                        _updateFunc(false, ResUI.MsgDownloadV2rayCoreSuccessfully);
 
                         try
                         {
-                            string fileName = Utils.GetPath(Global.DownloadFileName);
+                            string fileName = Utils.GetPath(Utils.GetDownloadFileName(url));
+                            fileName = Utils.UrlEncode(fileName);
                             Process process = new Process
                             {
                                 StartInfo = new ProcessStartInfo
@@ -90,25 +89,26 @@ namespace v2rayN.Handler
             {
                 if (args.Success)
                 {
-                    _updateFunc(false, string.Format(UIRes.I18N("MsgParsingSuccessfully"), "v2rayN"));
+                    _updateFunc(false, string.Format(ResUI.MsgParsingSuccessfully, "v2rayN"));
 
-                    string url = args.Msg;
-                    askToDownload(downloadHandle, url);
+                    url = args.Msg;
+                    askToDownload(downloadHandle, url, true);
                 }
                 else
                 {
                     _updateFunc(false, args.Msg);
                 }
             };
-            _updateFunc(false, string.Format(UIRes.I18N("MsgStartUpdating"), "v2rayN"));
-            CheckUpdateAsync("v2rayN");
+            _updateFunc(false, string.Format(ResUI.MsgStartUpdating, "v2rayN"));
+            CheckUpdateAsync(ECoreType.v2rayN, preRelease);
         }
 
 
-        public void CheckUpdateCore(string type, Config config, Action<bool, string> update)
+        public void CheckUpdateCore(ECoreType type, Config config, Action<bool, string> update, bool preRelease)
         {
             _config = config;
             _updateFunc = update;
+            var url = string.Empty;
 
             DownloadHandle downloadHandle = null;
             if (downloadHandle == null)
@@ -118,12 +118,12 @@ namespace v2rayN.Handler
                 {
                     if (args.Success)
                     {
-                        _updateFunc(false, UIRes.I18N("MsgDownloadV2rayCoreSuccessfully"));
-                        _updateFunc(false, UIRes.I18N("MsgUnpacking"));
+                        _updateFunc(false, ResUI.MsgDownloadV2rayCoreSuccessfully);
+                        _updateFunc(false, ResUI.MsgUnpacking);
 
                         try
                         {
-                            _updateFunc(true, "");
+                            _updateFunc(true, url);
                         }
                         catch (Exception ex)
                         {
@@ -145,102 +145,109 @@ namespace v2rayN.Handler
             {
                 if (args.Success)
                 {
-                    _updateFunc(false, string.Format(UIRes.I18N("MsgParsingSuccessfully"), "Core"));
-                    string url = args.Msg;
-                    askToDownload(downloadHandle, url);
+                    _updateFunc(false, string.Format(ResUI.MsgParsingSuccessfully, "Core"));
+                    url = args.Msg;
+                    askToDownload(downloadHandle, url, true);
                 }
                 else
                 {
                     _updateFunc(false, args.Msg);
                 }
             };
-            _updateFunc(false, string.Format(UIRes.I18N("MsgStartUpdating"), "Core"));
-            CheckUpdateAsync(type);
+            _updateFunc(false, string.Format(ResUI.MsgStartUpdating, "Core"));
+            CheckUpdateAsync(type, preRelease);
         }
 
 
-        public void UpdateSubscriptionProcess(Config config, Action<bool, string> update)
+        public void UpdateSubscriptionProcess(Config config, string groupId, bool blProxy, Action<bool, string> update)
         {
             _config = config;
             _updateFunc = update;
 
-            _updateFunc(false, UIRes.I18N("MsgUpdateSubscriptionStart"));
+            _updateFunc(false, ResUI.MsgUpdateSubscriptionStart);
 
             if (config.subItem == null || config.subItem.Count <= 0)
             {
-                _updateFunc(false, UIRes.I18N("MsgNoValidSubscription"));
+                _updateFunc(false, ResUI.MsgNoValidSubscription);
                 return;
             }
 
-            for (int k = 1; k <= config.subItem.Count; k++)
+            Task.Run(async () =>
             {
-                string id = config.subItem[k - 1].id.Trim();
-                string url = config.subItem[k - 1].url.Trim();
-                string hashCode = $"{k}->";
-                if (config.subItem[k - 1].enabled == false)
+                //Turn off system proxy
+                bool bSysProxyType = false;
+                if (!blProxy && config.sysProxyType == ESysProxyType.ForcedChange)
                 {
-                    continue;
-                }
-                if (Utils.IsNullOrEmpty(id) || Utils.IsNullOrEmpty(url))
-                {
-                    _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgNoValidSubscription")}");
-                    continue;
+                    bSysProxyType = true;
+                    config.sysProxyType = ESysProxyType.ForcedClear;
+                    SysProxyHandle.UpdateSysProxy(config, false);
+                    Thread.Sleep(3000);
                 }
 
-                DownloadHandle downloadHandle3 = new DownloadHandle();
-                downloadHandle3.UpdateCompleted += (sender2, args) =>
+                foreach (var item in config.subItem)
                 {
-                    if (args.Success)
+                    if (item.enabled == false)
                     {
-                        _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgGetSubscriptionSuccessfully")}");
-                        string result = Utils.Base64Decode(args.Msg);
-                        if (Utils.IsNullOrEmpty(result))
-                        {
-                            string raw = args.Msg == null ? string.Empty : args.Msg.Trim();
-                            if (raw.StartsWith("vmess://", StringComparison.OrdinalIgnoreCase)
-                                || raw.StartsWith("vless://", StringComparison.OrdinalIgnoreCase)
-                                || raw.StartsWith("trojan://", StringComparison.OrdinalIgnoreCase)
-                                || raw.StartsWith("ss://", StringComparison.OrdinalIgnoreCase)
-                                || raw.StartsWith("socks://", StringComparison.OrdinalIgnoreCase)
-                                || raw.StartsWith("http://", StringComparison.OrdinalIgnoreCase))
-                            {
-                                result = raw;
-                            }
-                            else
-                            {
-                                _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgSubscriptionDecodingFailed")}");
-                                return;
-                            }
-                        }
+                        continue;
+                    }
+                    if (!Utils.IsNullOrEmpty(groupId) && item.groupId != groupId)
+                    {
+                        continue;
+                    }
 
-                        ConfigHandler.RemoveServerViaSubid(ref config, id);
-                        _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgClearSubscription")}");
-                        //  RefreshServers();
-                        int ret = MainFormHandler.Instance.AddBatchServers(config, result, id);
-                        if (ret > 0)
-                        {
-                            // RefreshServers();
-                        }
-                        else
-                        {
-                            _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgFailedImportSubscription")}");
-                        }
-                        _updateFunc(true, $"{hashCode}{UIRes.I18N("MsgUpdateSubscriptionEnd")}");
+                    string id = item.id.TrimEx();
+                    string url = item.url.TrimEx();
+                    string userAgent = item.userAgent.TrimEx();
+                    //string groupId = item.groupId.TrimEx();
+                    string hashCode = $"{item.remarks}->";
+                    if (Utils.IsNullOrEmpty(id) || Utils.IsNullOrEmpty(url))
+                    {
+                        //_updateFunc(false, $"{hashCode}{ResUI.MsgNoValidSubscription}");
+                        continue;
+                    }
+
+                    var downloadHandle = new DownloadHandle();
+                    downloadHandle.Error += (sender2, args) =>
+                    {
+                        _updateFunc(false, $"{hashCode}{args.GetException().Message}");
+                    };
+
+                    _updateFunc(false, $"{hashCode}{ResUI.MsgStartGettingSubscriptions}");
+                    var result = await downloadHandle.DownloadStringAsync(url, blProxy, userAgent);
+                    if (blProxy && Utils.IsNullOrEmpty(result))
+                    {
+                        result = await downloadHandle.DownloadStringAsync(url, false, userAgent);
+                    }
+
+                    if (Utils.IsNullOrEmpty(result))
+                    {
+                        _updateFunc(false, $"{hashCode}{ResUI.MsgSubscriptionDecodingFailed}");
                     }
                     else
                     {
-                        _updateFunc(false, args.Msg);
+                        _updateFunc(false, $"{hashCode}{ResUI.MsgGetSubscriptionSuccessfully}");
+                        if (result.Length < 99)
+                        {
+                            _updateFunc(false, $"{hashCode}{result}");
+                        }
+
+                        int ret = ConfigHandler.AddBatchServers(ref config, result, id, item.groupId.TrimEx());
+                        _updateFunc(false,
+                            ret > 0
+                                ? $"{hashCode}{ResUI.MsgUpdateSubscriptionEnd}"
+                                : $"{hashCode}{ResUI.MsgFailedImportSubscription}");
                     }
-                };
-                downloadHandle3.Error += (sender2, args) =>
+                    _updateFunc(false, "-------------------------------------------------------");
+                }
+                //restore system proxy
+                if (bSysProxyType)
                 {
-                    _updateFunc(false, args.GetException().Message);
-                };
+                    config.sysProxyType = ESysProxyType.ForcedChange;
+                    SysProxyHandle.UpdateSysProxy(config, false);
+                }
+                _updateFunc(true, $"{ResUI.MsgUpdateSubscriptionEnd}");
 
-                downloadHandle3.WebDownloadString(url);
-                _updateFunc(false, $"{hashCode}{UIRes.I18N("MsgStartGettingSubscriptions")}");
-            }
-
+            });
         }
 
 
@@ -248,263 +255,120 @@ namespace v2rayN.Handler
         {
             _config = config;
             _updateFunc = update;
+            var url = string.Format(Global.geoUrl, geoName);
 
-            string url = string.Format(geoUrl, geoName);
-            if (UI.ShowYesNo(string.Format(UIRes.I18N("DownloadYesNo"), url)) != DialogResult.Yes)
+            DownloadHandle downloadHandle = null;
+            if (downloadHandle == null)
             {
-                return;
-            }
+                downloadHandle = new DownloadHandle();
 
-            // Do not use Google's availability check to decide whether GitHub
-            // should be accessed through the local proxy. Different destinations
-            // can have different reachability in the user's network.
-            int httpPort = _config.GetLocalPort(Global.InboundHttp);
-            WebProxy localProxy = httpPort > 0
-                ? new WebProxy(Global.Loopback, httpPort) : null;
-
-            string proxyTempPath = Utils.GetPath(geoName + ".dat.proxy.tmp");
-            string directTempPath = Utils.GetPath(geoName + ".dat.direct.tmp");
-
-            try
-            {
-                if (File.Exists(proxyTempPath))
-                    File.Delete(proxyTempPath);
-                if (File.Exists(directTempPath))
-                    File.Delete(directTempPath);
-            }
-            catch (Exception ex)
-            {
-                Utils.SaveLog("GeoIP temporary-file cleanup failed: " + ex.Message, ex);
-            }
-
-            if (localProxy != null)
-            {
-                Utils.SaveLog("Geo file download: trying local HTTP proxy, port=" + httpPort);
-                DownloadGeoFileAttempt(geoName, url, localProxy, proxyTempPath, directTempPath, true);
-            }
-            else
-            {
-                Utils.SaveLog("Geo file download: no local HTTP inbound configured; trying direct connection.");
-                DownloadGeoFileAttempt(geoName, url, null, directTempPath, directTempPath, false);
-            }
-        }
-
-        private void DownloadGeoFileAttempt(string geoName, string url, WebProxy proxy,
-            string downloadPath, string directTempPath, bool retryDirect)
-        {
-            DownloadHandle downloadHandle = new DownloadHandle();
-            downloadHandle.UpdateCompleted += (sender, args) =>
-            {
-                if (args.Success)
+                downloadHandle.UpdateCompleted += (sender2, args) =>
                 {
-                    try
+                    if (args.Success)
                     {
-                        if (!File.Exists(downloadPath) || new FileInfo(downloadPath).Length <= 0)
-                            throw new IOException("Geo file download completed but the temporary file is empty.");
+                        _updateFunc(false, string.Format(ResUI.MsgDownloadGeoFileSuccessfully, geoName));
 
-                        string targetPath = Utils.GetPath(geoName + ".dat");
-                        ReplaceGeoFileSafely(downloadPath, targetPath);
-                        Utils.SaveLog("Geo file downloaded successfully: " + geoName
-                            + (proxy == null ? " (direct)" : " (local HTTP proxy)"));
-                        _updateFunc(false, string.Format(UIRes.I18N("MsgDownloadGeoFileSuccessfully"), geoName));
-                        _updateFunc(true, "");
+                        try
+                        {
+                            string fileName = Utils.GetPath(Utils.GetDownloadFileName(url));
+                            if (File.Exists(fileName))
+                            {
+                                string targetPath = Utils.GetPath($"{geoName}.dat");
+                                if (File.Exists(targetPath))
+                                {
+                                    File.Delete(targetPath);
+                                }
+                                File.Move(fileName, targetPath);
+                                //_updateFunc(true, "");
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            _updateFunc(false, ex.Message);
+                        }
                     }
-                    catch (Exception ex)
+                    else
                     {
-                        Utils.SaveLog("Geo file installation failed: " + ex.Message, ex);
-                        _updateFunc(false, ex.Message);
+                        _updateFunc(false, args.Msg);
                     }
-                }
-                else if (!string.IsNullOrEmpty(args.Msg)
-                    && (args.Msg.StartsWith(UIRes.I18N("SpeedtestFailurePrefix"), StringComparison.Ordinal)
-                        || args.Msg.StartsWith(UIRes.I18N("DownloadTimeoutPrefix"), StringComparison.Ordinal)))
+                };
+                downloadHandle.Error += (sender2, args) =>
                 {
-                    HandleGeoFileDownloadFailure(geoName, url, proxy, directTempPath,
-                        retryDirect, new IOException(args.Msg));
-                }
-                else if (!string.IsNullOrEmpty(args.Msg)
-                    && !string.Equals(args.Msg, UIRes.I18N("Downloading"), StringComparison.Ordinal)
-                    && !args.Msg.StartsWith("...", StringComparison.Ordinal))
-                {
-                    _updateFunc(false, args.Msg);
-                }
-            };
+                    _updateFunc(false, args.GetException().Message);
+                };
+            }
+            askToDownload(downloadHandle, url, false);
 
-            downloadHandle.Error += (sender, args) =>
-            {
-                HandleGeoFileDownloadFailure(geoName, url, proxy, directTempPath,
-                    retryDirect, args.GetException());
-            };
-
-            downloadHandle.DownloadFileAsync(url, proxy, 600, downloadPath, false, true);
         }
 
-
-
-        private void HandleGeoFileDownloadFailure(string geoName, string url, WebProxy proxy,
-            string directTempPath, bool retryDirect, Exception error)
+        public void RunAvailabilityCheck(Action<bool, string> update)
         {
-            Utils.SaveLog("Geo file download failed (" + (proxy == null ? "direct" : "local HTTP proxy")
-                + "): " + error.Message, error);
-
-            if (retryDirect)
+            Task.Run(() =>
             {
-                _updateFunc(false, UIRes.I18N("GeoProxyDownloadFailedRetryDirect"));
-                try
-                {
-                    if (File.Exists(directTempPath))
-                        File.Delete(directTempPath);
-                }
-                catch (Exception cleanupException)
-                {
-                    Utils.SaveLog(cleanupException.Message, cleanupException);
-                }
-                DownloadGeoFileAttempt(geoName, url, null, directTempPath, directTempPath, false);
-            }
-            else
-            {
-                _updateFunc(false, UIRes.I18N("GeoDownloadFailedAllMethods") + error.Message);
-            }
-        }
+                var time = (new DownloadHandle()).RunAvailabilityCheck(null);
 
-        private void ReplaceGeoFileSafely(string downloadedPath, string targetPath)
-        {
-            string backupPath = targetPath + ".bak";
-            bool movedOriginal = false;
-
-            try
-            {
-                if (File.Exists(backupPath))
-                    File.Delete(backupPath);
-
-                if (File.Exists(targetPath))
-                {
-                    File.Move(targetPath, backupPath);
-                    movedOriginal = true;
-                }
-
-                File.Move(downloadedPath, targetPath);
-
-                if (movedOriginal && File.Exists(backupPath))
-                    File.Delete(backupPath);
-            }
-            catch
-            {
-                // Restore the previous working file if installing the new one fails.
-                try
-                {
-                    if (File.Exists(targetPath))
-                        File.Delete(targetPath);
-                    if (movedOriginal && File.Exists(backupPath))
-                        File.Move(backupPath, targetPath);
-                }
-                catch (Exception restoreException)
-                {
-                    Utils.SaveLog("Geo file rollback failed: " + restoreException.Message, restoreException);
-                }
-                throw;
-            }
-            finally
-            {
-                try
-                {
-                    if (File.Exists(downloadedPath))
-                        File.Delete(downloadedPath);
-                }
-                catch (Exception cleanupException)
-                {
-                    Utils.SaveLog(cleanupException.Message, cleanupException);
-                }
-            }
+                update(false, string.Format(ResUI.TestMeOutput, time));
+            });
         }
 
         #region private
 
-        private void CheckUpdateAsync(string type)
+        private async void CheckUpdateAsync(ECoreType type, bool preRelease)
         {
-            SynchronizationContext uiContext = SynchronizationContext.Current;
-            ThreadPool.QueueUserWorkItem(delegate
+            try
             {
-                try
+                var coreInfo = LazyConfig.Instance.GetCoreInfo(type);
+                string url = coreInfo.coreReleaseApiUrl;
+
+                var result = await (new DownloadHandle()).DownloadStringAsync(url, true, "");
+                if (!Utils.IsNullOrEmpty(result))
                 {
-                    Utils.SetSecurityProtocol();
-                    string url;
-                    if (type == "v2fly")
-                        url = v2flyCoreLatestUrl;
-                    else if (type == "xray")
-                        url = xrayCoreLatestUrl;
-                    else if (type == "v2rayN")
-                        url = nLatestUrl;
-                    else
-                        throw new ArgumentException("Type");
-
-                    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-                    request.AllowAutoRedirect = false;
-                    request.Method = "GET";
-                    request.Timeout = 15000;
-                    request.ReadWriteTimeout = 15000;
-
-                    string redirectUrl = null;
-                    using (HttpWebResponse response = (HttpWebResponse)request.GetResponse())
-                    {
-                        int status = (int)response.StatusCode;
-                        if (status >= 300 && status < 400)
-                            redirectUrl = response.Headers[HttpResponseHeader.Location];
-                    }
-
-                    if (!string.IsNullOrEmpty(redirectUrl))
-                    {
-                        if (uiContext != null)
-                            uiContext.Post(delegate(object state) { responseHandler(type, redirectUrl); }, null);
-                        else
-                            responseHandler(type, redirectUrl);
-                    }
-                    else
-                    {
-                        Utils.SaveLog("StatusCode error: " + url);
-                    }
+                    responseHandler(type, result, preRelease);
                 }
-                catch (Exception ex)
+                else
                 {
-                    Utils.SaveLog(ex.Message, ex);
-                    if (uiContext != null)
-                        uiContext.Post(delegate(object state) { _updateFunc(false, ex.Message); }, null);
-                    else
-                        _updateFunc(false, ex.Message);
+                    Utils.SaveLog("StatusCode error: " + url);
+                    return;
                 }
-            });
+            }
+            catch (Exception ex)
+            {
+                Utils.SaveLog(ex.Message, ex);
+                _updateFunc(false, ex.Message);
+            }
         }
 
         /// <summary>
         /// 获取V2RayCore版本
         /// </summary>
-        private string getCoreVersion(string type)
+        private string getCoreVersion(ECoreType type)
         {
             try
             {
-                var core = string.Empty;
-                var match = string.Empty;
-                if (type == "v2fly")
+
+                var coreInfo = LazyConfig.Instance.GetCoreInfo(type);
+                string filePath = string.Empty;
+                foreach (string name in coreInfo.coreExes)
                 {
-                    core = "v2ray.exe";
-                    match = "V2Ray";
+                    string vName = $"{name}.exe";
+                    vName = Utils.GetPath(vName);
+                    if (File.Exists(vName))
+                    {
+                        filePath = vName;
+                        break;
+                    }
                 }
-                else if (type == "xray")
-                {
-                    core = "xray.exe";
-                    match = "Xray";
-                }
-                string filePath = Utils.GetPath(core);
+
                 if (!File.Exists(filePath))
                 {
-                    string msg = string.Format(UIRes.I18N("NotFoundCore"), @"");
+                    string msg = string.Format(ResUI.NotFoundCore, @"", "");
                     //ShowMsg(true, msg);
                     return "";
                 }
 
                 Process p = new Process();
                 p.StartInfo.FileName = filePath;
-                p.StartInfo.Arguments = "-version";
+                p.StartInfo.Arguments = coreInfo.versionArg;
                 p.StartInfo.WorkingDirectory = Utils.StartupPath();
                 p.StartInfo.UseShellExecute = false;
                 p.StartInfo.RedirectStandardOutput = true;
@@ -513,7 +377,20 @@ namespace v2rayN.Handler
                 p.Start();
                 p.WaitForExit(5000);
                 string echo = p.StandardOutput.ReadToEnd();
-                string version = Regex.Match(echo, $"{match} ([0-9.]+) \\(").Groups[1].Value;
+                string version = string.Empty;
+                switch (type)
+                {
+                    case ECoreType.v2fly:
+                    case ECoreType.SagerNet:
+                    case ECoreType.Xray:
+                    case ECoreType.v2fly_v5:
+                        version = Regex.Match(echo, $"{coreInfo.match} ([0-9.]+) \\(").Groups[1].Value;
+                        break;
+                    case ECoreType.clash:
+                    case ECoreType.clash_meta:
+                        version = Regex.Match(echo, $"v[0-9.]+").Groups[0].Value;
+                        break;
+                }
                 return version;
             }
             catch (Exception ex)
@@ -523,38 +400,62 @@ namespace v2rayN.Handler
                 return "";
             }
         }
-        private void responseHandler(string type, string redirectUrl)
+        private void responseHandler(ECoreType type, string gitHubReleaseApi, bool preRelease)
         {
             try
             {
-                string version = redirectUrl.Substring(redirectUrl.LastIndexOf("/", StringComparison.Ordinal) + 1);
+                var gitHubReleases = Utils.FromJson<List<GitHubRelease>>(gitHubReleaseApi);
+                string version;
+                if (preRelease)
+                {
+                    version = gitHubReleases!.First().TagName;
+                }
+                else
+                {
+                    version = gitHubReleases!.First(r => r.Prerelease == false).TagName;
+                }
+                var coreInfo = LazyConfig.Instance.GetCoreInfo(type);
 
                 string curVersion;
                 string message;
                 string url;
-                if (type == "v2fly")
+                switch (type)
                 {
-                    curVersion = "v" + getCoreVersion(type);
-                    message = string.Format(UIRes.I18N("IsLatestCore"), curVersion);
-                    string osBit = Environment.Is64BitProcess ? "64" : "32";
-                    url = string.Format(v2flyCoreUrl, version, osBit);
-                }
-                else if (type == "xray")
-                {
-                    curVersion = "v" + getCoreVersion(type);
-                    message = string.Format(UIRes.I18N("IsLatestCore"), curVersion);
-                    string osBit = Environment.Is64BitProcess ? "64" : "32";
-                    url = string.Format(xrayCoreUrl, version, osBit);
-                }
-                else if (type == "v2rayN")
-                {
-                    curVersion = FileVersionInfo.GetVersionInfo(Utils.GetExePath()).FileVersion.ToString();
-                    message = string.Format(UIRes.I18N("IsLatestN"), curVersion);
-                    url = string.Format(nUrl, version);
-                }
-                else
-                {
-                    throw new ArgumentException("Type");
+                    case ECoreType.v2fly:
+                    case ECoreType.SagerNet:
+                    case ECoreType.Xray:
+                    case ECoreType.v2fly_v5:
+                        {
+                            curVersion = "v" + getCoreVersion(type);
+                            message = string.Format(ResUI.IsLatestCore, curVersion);
+                            string osBit = Environment.Is64BitProcess ? "64" : "32";
+                            url = string.Format(coreInfo.coreDownloadUrl64, version, osBit);
+                            break;
+                        }
+                    case ECoreType.clash:
+                    case ECoreType.clash_meta:
+                        {
+                            curVersion = getCoreVersion(type);
+                            message = string.Format(ResUI.IsLatestCore, curVersion);
+                            if (Environment.Is64BitProcess)
+                            {
+                                url = string.Format(coreInfo.coreDownloadUrl64, version);
+                            }
+                            else
+                            {
+                                url = string.Format(coreInfo.coreDownloadUrl32, version);
+                            }
+                            break;
+                        }
+                    case ECoreType.v2rayN:
+                        {
+                            curVersion = FileVersionInfo.GetVersionInfo(Utils.GetExePath()).FileVersion.ToString();
+                            message = string.Format(ResUI.IsLatestN, curVersion);
+                            url = string.Format(coreInfo.coreDownloadUrl64, version);
+                            break;
+                        }
+                    default:
+                        throw new ArgumentException("Type");
                 }
 
                 if (curVersion == version)
@@ -572,27 +473,24 @@ namespace v2rayN.Handler
             }
         }
 
-        private void askToDownload(DownloadHandle downloadHandle, string url)
+        private void askToDownload(DownloadHandle downloadHandle, string url, bool blAsk)
         {
-            if (UI.ShowYesNo(string.Format(UIRes.I18N("DownloadYesNo"), url)) == DialogResult.Yes)
+            bool blDownload = false;
+            if (blAsk)
             {
-                if (httpProxyTest() > 0)
+                if (UI.ShowYesNo(string.Format(ResUI.DownloadYesNo, url)) == DialogResult.Yes)
                 {
-                    int httpPort = _config.GetLocalPort(Global.InboundHttp);
-                    WebProxy webProxy = new WebProxy(Global.Loopback, httpPort);
-                    downloadHandle.DownloadFileAsync(url, webProxy, 600);
-                }
-                else
-                {
-                    downloadHandle.DownloadFileAsync(url, null, 600);
+                    blDownload = true;
                 }
             }
-        }
-
-        private int httpProxyTest()
-        {
-            SpeedtestHandler statistics = new SpeedtestHandler(ref _config);
-            return statistics.RunAvailabilityCheck();
+            else
+            {
+                blDownload = true;
+            }
+            if (blDownload)
+            {
+                downloadHandle.DownloadFileAsync(url, true, 600);
+            }
         }
         #endregion
     }

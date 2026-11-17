@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Forms;
 using v2rayN.Base;
 using v2rayN.Handler;
 using v2rayN.Mode;
+using v2rayN.Resx;
 
 namespace v2rayN.Forms
 {
@@ -47,8 +49,16 @@ namespace v2rayN.Forms
                 }
                 rulesItem.inboundTag = inboundTag;
                 rulesItem.outboundTag = cmbOutboundTag.Text;
-                rulesItem.domain = Utils.String2List(txtDomain.Text);
-                rulesItem.ip = Utils.String2List(txtIP.Text);
+                if (chkAutoSort.Checked)
+                {
+                    rulesItem.domain = Utils.String2ListSorted(txtDomain.Text);
+                    rulesItem.ip = Utils.String2ListSorted(txtIP.Text);
+                }
+                else
+                {
+                    rulesItem.domain = Utils.String2List(txtDomain.Text);
+                    rulesItem.ip = Utils.String2List(txtIP.Text);
+                }
 
                 var protocol = new List<string>();
                 for (int i = 0; i < clbProtocol.Items.Count; i++)
@@ -59,6 +69,7 @@ namespace v2rayN.Forms
                     }
                 }
                 rulesItem.protocol = protocol;
+                rulesItem.enabled = chkEnabled.Checked;
             }
         }
         private void BindingData()
@@ -91,6 +102,7 @@ namespace v2rayN.Forms
                         }
                     }
                 }
+                chkEnabled.Checked = rulesItem.enabled;
             }
         }
         private void ClearBind()
@@ -99,38 +111,38 @@ namespace v2rayN.Forms
             cmbOutboundTag.Text = Global.agentTag;
             txtDomain.Text = string.Empty;
             txtIP.Text = string.Empty;
+            chkEnabled.Checked = true;
         }
         private void btnOK_Click(object sender, EventArgs e)
         {
             EndBindingData();
-            var hasRule = false;
-            if (rulesItem.domain != null && rulesItem.domain.Count > 0)
-            {
-                hasRule = true;
-            }
-            if (rulesItem.ip != null && rulesItem.ip.Count > 0)
-            {
-                hasRule = true;
-            }
-            if (rulesItem.protocol != null && rulesItem.protocol.Count > 0)
-            {
-                hasRule = true;
-            }
-            if (!Utils.IsNullOrEmpty(rulesItem.port))
-            {
-                hasRule = true;
-            }
+
+            bool hasRule = 
+                rulesItem.domain != null 
+                && rulesItem.domain.Count > 0 
+                || rulesItem.ip != null 
+                && rulesItem.ip.Count > 0 
+                || rulesItem.protocol != null 
+                && rulesItem.protocol.Count > 0 
+                || !Utils.IsNullOrEmpty(rulesItem.port);
+
             if (!hasRule)
             {
-                UI.ShowWarning(string.Format(UIRes.I18N("RoutingRuleDetailRequiredTips"), "Port/Protocol/Domain/IP"));
+                UI.ShowWarning(string.Format(ResUI.RoutingRuleDetailRequiredTips, "Port/Protocol/Domain/IP"));
                 return;
             }
-            this.DialogResult = DialogResult.OK;
+
+            DialogResult = DialogResult.OK;
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
+            DialogResult = DialogResult.Cancel;
+        }
+
+        private void linkRuleobjectDoc_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
+        {
+            Process.Start("https://www.v2fly.org/config/routing.html#ruleobject");
         }
     }
 }

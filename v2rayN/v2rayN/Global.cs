@@ -7,17 +7,30 @@ namespace v2rayN
     {
         #region 常量
 
-        public const string DownloadFileName = "v2ray-windows.zip";
-        public const string v2rayWebsiteUrl = @"https://github.com/ihidao/v2ray-core_xray-core_for_XP";
-        public const string AboutUrl = @"https://github.com/ihidao/v2rayN_for_XP";
+        //public const string DownloadFileName = "v2ray-windows.zip";
+        public const string v2rayWebsiteUrl = @"https://www.v2fly.org/";
+        public const string AboutUrl = @"https://github.com/2dust/v2rayN";
         public const string UpdateUrl = AboutUrl + @"/releases";
         public const string v2flyCoreUrl = "https://github.com/v2fly/v2ray-core/releases";
         public const string xrayCoreUrl = "https://github.com/XTLS/Xray-core/releases";
+        public const string SagerNetCoreUrl = "https://github.com/SagerNet/v2ray-core/releases";
         public const string NUrl = @"https://github.com/2dust/v2rayN/releases";
+        public const string clashCoreUrl = "https://github.com/Dreamacro/clash/releases";
+        public const string clashMetaCoreUrl = "https://github.com/MetaCubeX/Clash.Meta/releases";
+        public const string hysteriaCoreUrl = "https://github.com/HyNetwork/hysteria/releases";
+        public const string naiveproxyCoreUrl = "https://github.com/klzgrad/naiveproxy/releases";
+        public const string tuicCoreUrl = "https://github.com/EAimTY/tuic/releases";
+        public const string singboxCoreUrl = "https://github.com/SagerNet/sing-box/releases";
+        public const string geoUrl = "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/{0}.dat";
 
 
+
+
+        /// <summary>
+        /// SpeedTestUrl
+        /// </summary>
+        public const string SpeedTestUrl = @"http://cachefly.cachefly.net/10mb.test";
         public const string SpeedPingTestUrl = @"https://www.google.com/generate_204";
-        public const string AvailabilityTestUrl = @"https://www.google.com/generate_204";
 
         /// <summary>
         /// CustomRoutingListUrl
@@ -57,8 +70,9 @@ namespace v2rayN
         /// </summary>
         public const string v2raySampleHttpresponseFileName = "v2rayN.Sample.SampleHttpresponse.txt";
 
-
         public const string CustomRoutingFileName = "v2rayN.Sample.custom_routing_";
+
+        public const string v2raySampleInbound = "v2rayN.Sample.SampleInbound.txt";
 
 
         /// <summary>
@@ -104,6 +118,8 @@ namespace v2rayN
 
         public const string InboundSocks = "socks";
         public const string InboundHttp = "http";
+        public const string InboundSocks2 = "socks2";
+        public const string InboundHttp2 = "http2";
         public const string Loopback = "127.0.0.1";
         public const string InboundAPITagName = "api";
         public const string InboundAPIProtocal = "dokodemo-door";
@@ -172,28 +188,40 @@ namespace v2rayN
         /// Language
         /// </summary>
         public const string MyRegKeyLanguage = "CurrentLanguage";
+
         /// <summary>
         /// Icon
         /// </summary>
         public const string CustomIconName = "v2rayN.ico";
 
-        public enum StatisticsFreshRate
-        {
-            quick = 1000,
-            medium = 2000,
-            slow = 3000
-        }
         public const string StatisticLogOverall = "StatisticLogOverall.json";
 
         public const string IEProxyExceptions = "localhost;127.*;10.*;172.16.*;172.17.*;172.18.*;172.19.*;172.20.*;172.21.*;172.22.*;172.23.*;172.24.*;172.25.*;172.26.*;172.27.*;172.28.*;172.29.*;172.30.*;172.31.*;192.168.*";
+        public static readonly List<string> IEProxyProtocols = new List<string> {
+                        "{ip}:{http_port}",
+                        "socks={ip}:{socks_port}",
+                        "http={ip}:{http_port};https={ip}:{http_port};ftp={ip}:{http_port};socks={ip}:{socks_port}",
+                        "http=http://{ip}:{http_port};https=http://{ip}:{http_port}",
+                        ""
+                    };
 
         public const string RoutingRuleComma = "<COMMA>";
 
-        public static readonly IEnumerable<string> ssSecuritys = new HashSet<string> { "aes-256-gcm", "aes-128-gcm", "chacha20-poly1305", "chacha20-ietf-poly1305", "none", "plain" };
-
+        public static readonly List<string> vmessSecuritys = new List<string> { "aes-128-gcm", "chacha20-poly1305", "auto", "none", "zero" };
+        public static readonly List<string> ssSecuritys = new List<string> { "aes-256-gcm", "aes-128-gcm", "chacha20-poly1305", "chacha20-ietf-poly1305", "none", "plain" };
+        public static readonly List<string> ssSecuritysInSagerNet = new List<string> { "none", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305", "aes-128-gcm", "aes-192-gcm", "aes-256-gcm", "chacha20-ietf-poly1305", "xchacha20-ietf-poly1305", "rc4", "rc4-md5", "aes-128-ctr", "aes-192-ctr", "aes-256-ctr", "aes-128-cfb", "aes-192-cfb", "aes-256-cfb", "aes-128-cfb8", "aes-192-cfb8", "aes-256-cfb8", "aes-128-ofb", "aes-192-ofb", "aes-256-ofb", "bf-cfb", "cast5-cfb", "des-cfb", "idea-cfb", "rc2-cfb", "seed-cfb", "camellia-128-cfb", "camellia-192-cfb", "camellia-256-cfb", "camellia-128-cfb8", "camellia-192-cfb8", "camellia-256-cfb8", "salsa20", "chacha20", "chacha20-ietf", "xchacha20" };
+        public static readonly List<string> ssSecuritysInXray = new List<string> { "aes-256-gcm", "aes-128-gcm", "chacha20-poly1305", "chacha20-ietf-poly1305", "xchacha20-poly1305", "xchacha20-ietf-poly1305", "none", "plain", "2022-blake3-aes-128-gcm", "2022-blake3-aes-256-gcm", "2022-blake3-chacha20-poly1305" };
+        public static readonly List<string> xtlsFlows = new List<string> { "", "xtls-rprx-origin", "xtls-rprx-origin-udp443", "xtls-rprx-direct", "xtls-rprx-direct-udp443", "xtls-rprx-vision", "xtls-rprx-vision-udp443" };
+        public static readonly List<string> networks = new List<string> { "tcp", "kcp", "ws", "h2", "quic", "grpc" };
+        public static readonly List<string> kcpHeaderTypes = new List<string> { "srtp", "utp", "wechat-video", "dtls", "wireguard" };
+        public static readonly List<string> coreTypes = new List<string> { "v2fly", "SagerNet", "Xray", "v2fly_v5" };
+        public static readonly List<string> domainMatchers = new List<string> { "linear", "mph", "" };
+        public static readonly List<string> fingerprints = new List<string> { "chrome", "firefox", "safari", "randomized", "" };
+        public static readonly List<string> domainStrategy4Freedoms = new List<string> { "AsIs", "UseIP", "UseIPv4", "UseIPv6", "" };
         public const string GrpcgunMode = "gun";
         public const string GrpcmultiMode = "multi";
-        
+        public const string CheckMark = "√";
+
         #endregion
 
         #region 全局变量
@@ -207,37 +235,12 @@ namespace v2rayN
         }
 
         /// <summary>
-        /// 是否开启全局代理(http)
-        /// </summary>
-        public static bool sysAgent
-        {
-            get; set;
-        }
-
-        /// <summary>
-        /// socks端口
-        /// </summary>
-        public static int socksPort
-        {
-            get; set;
-        }
-
-        /// <summary>
-        /// http端口
-        /// </summary>
-        public static int httpPort
-        {
-            get; set;
-        }
-
-
-        /// <summary>
         ///  
         /// </summary>
         public static int statePort
         {
             get; set;
-        } = 10085;
+        }
 
         public static Job processJob
         {

@@ -1,42 +1,34 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Windows.Forms;
-using v2rayN.Handler;
 using v2rayN.Base;
-using v2rayN.HttpProxyHandler;
+using v2rayN.Handler;
 using v2rayN.Mode;
+using v2rayN.Resx;
 
 namespace v2rayN.Forms
 {
     public partial class OptionSettingForm : BaseForm
     {
-        private static readonly ECoreType[] CoreTypeOrder = new ECoreType[]
-        {
-            ECoreType.v2ray_core_5_or_above,
-            ECoreType.v2ray_core_below_5,
-            ECoreType.xray_core_1_or_above,
-            ECoreType.xray_core_below_1
-        };
-
         public OptionSettingForm()
         {
             InitializeComponent();
-
-            // Keep the core type selector compact while retaining a usable drop-down.
-            cmbCoreType.Width = 180;
-            cmbCoreType.DropDownWidth = 180;
         }
 
         private void OptionSettingForm_Load(object sender, EventArgs e)
         {
-            // Keep custom UI strings synchronized with the active application language.
-            UIRes.SetCulture(System.Threading.Thread.CurrentThread.CurrentUICulture.Name);
+            cmbSystemProxyAdvancedProtocol.Items.AddRange(Global.IEProxyProtocols.ToArray());
+            cmbdomainStrategy4Freedom.Items.Clear();
+            cmbdomainStrategy4Freedom.Items.AddRange(Global.domainStrategy4Freedoms.ToArray());
 
             InitBase();
 
             InitKCP();
 
             InitGUI();
+
+            InitCoreType();
         }
 
         /// <summary>
@@ -46,8 +38,6 @@ namespace v2rayN.Forms
         {
             //日志
             chklogEnabled.Checked = config.logEnabled;
-            // This was not part of the original v2rayN logging UI.
-            chkShowAccessLogs.Visible = false;
             cmbloglevel.Text = config.loglevel;
 
             //Mux
@@ -60,31 +50,21 @@ namespace v2rayN.Forms
                 cmbprotocol.Text = config.inbound[0].protocol.ToString();
                 chkudpEnabled.Checked = config.inbound[0].udpEnabled;
                 chksniffingEnabled.Checked = config.inbound[0].sniffingEnabled;
+                chkAllowLANConn.Checked = config.inbound[0].allowLANConn;
+                txtuser.Text = config.inbound[0].user;
+                txtpass.Text = config.inbound[0].pass;
 
-                txtlocalPort2.Text = $"{config.inbound[0].localPort + 1}";
-                cmbprotocol2.Text = Global.InboundHttp;
-
-                if (config.inbound.Count > 1)
-                {
-                    txtlocalPort2.Text = config.inbound[1].localPort.ToString();
-                    cmbprotocol2.Text = config.inbound[1].protocol.ToString();
-                    chkudpEnabled2.Checked = config.inbound[1].udpEnabled;
-                    chksniffingEnabled2.Checked = config.inbound[1].sniffingEnabled;
-                    chkAllowIn2.Checked = true;
-                }
-                else
-                {
-                    chkAllowIn2.Checked = false;
-                }
-                chkAllowIn2State();
             }
 
             //remoteDNS
             txtremoteDNS.Text = config.remoteDNS;
+            cmbdomainStrategy4Freedom.Text = config.domainStrategy4Freedom;
 
             chkdefAllowInsecure.Checked = config.defAllowInsecure;
 
             txtsystemProxyExceptions.Text = config.systemProxyExceptions;
+
+            cmbSystemProxyAdvancedProtocol.Text = config.systemProxyAdvancedProtocol;
         }
 
 
@@ -110,46 +90,49 @@ namespace v2rayN.Forms
             //开机自动启动
             chkAutoRun.Checked = Utils.IsAutoRun();
 
-            chkAllowLANConn.Checked = config.allowLANConn;
             chkEnableStatistics.Checked = config.enableStatistics;
+            numStatisticsFreshRate.Value = config.statisticsFreshRate;
             chkKeepOlderDedupl.Checked = config.keepOlderDedupl;
 
-            ComboItem[] cbSource = new ComboItem[]
-            {
-                new ComboItem{ID = (int)Global.StatisticsFreshRate.quick, Text = UIRes.I18N("QuickFresh")},
-                new ComboItem{ID = (int)Global.StatisticsFreshRate.medium, Text = UIRes.I18N("MediumFresh")},
-                new ComboItem{ID = (int)Global.StatisticsFreshRate.slow, Text = UIRes.I18N("SlowFresh")},
-            };
-            cbFreshrate.DataSource = cbSource;
+            chkIgnoreGeoUpdateCore.Checked = config.ignoreGeoUpdateCore;
+            chkEnableAutoAdjustMainLvColWidth.Checked = config.uiItem.enableAutoAdjustMainLvColWidth;
+            chkEnableSecurityProtocolTls13.Checked = config.enableSecurityProtocolTls13;
 
-            cbFreshrate.DisplayMember = "Text";
-            cbFreshrate.ValueMember = "ID";
+            txtautoUpdateInterval.Text = config.autoUpdateInterval.ToString();
+            txtautoUpdateSubInterval.Text = config.autoUpdateSubInterval.ToString();
+            chkEnableCheckPreReleaseUpdate.Checked = config.checkPreReleaseUpdate;
+            txttrayMenuServersLimit.Text = config.trayMenuServersLimit.ToString();
+        }
 
-            switch (config.statisticsFreshRate)
+        private void InitCoreType()
+        {
+            if (config.coreTypeItem == null)
             {
-                case (int)Global.StatisticsFreshRate.quick:
-                    cbFreshrate.SelectedItem = cbSource[0];
-                    break;
-                case (int)Global.StatisticsFreshRate.medium:
-                    cbFreshrate.SelectedItem = cbSource[1];
-                    break;
-                case (int)Global.StatisticsFreshRate.slow:
-                    cbFreshrate.SelectedItem = cbSource[2];
-                    break;
+                config.coreTypeItem = new List<CoreTypeItem>();
             }
 
-            chkIgnoreGeoUpdateCore.Checked = config.ignoreGeoUpdateCore;
-            cmbCoreType.Items.Clear();
-            cmbCoreType.Items.AddRange(new object[]
+            foreach (EConfigType it in Enum.GetValues(typeof(EConfigType)))
             {
-                UIRes.I18N("CoreTypeV2Ray5OrAbove"),
-                UIRes.I18N("CoreTypeV2RayBelow5"),
-                UIRes.I18N("CoreTypeXray1OrAbove"),
-                UIRes.I18N("CoreTypeXrayBelow1")
-            });
-            int coreTypeIndex = Array.IndexOf(CoreTypeOrder, config.coreType);
-            cmbCoreType.SelectedIndex = coreTypeIndex >= 0 ? coreTypeIndex : 0;
+                if (config.coreTypeItem.FindIndex(t => t.configType == it) >= 0)
+                {
+                    continue;
+                }
+
+                config.coreTypeItem.Add(new CoreTypeItem()
+                {
+                    configType = it,
+                    coreType = ECoreType.Xray
+                });
+            }
+            for (int k = 1; k <= config.coreTypeItem.Count; k++)
+            {
+                var item = config.coreTypeItem[k - 1];
+                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(Global.coreTypes.ToArray());
+                tabPageCoreType.Controls[$"labCoreType{k}"].Text = item.configType.ToString();
+                tabPageCoreType.Controls[$"cmbCoreType{k}"].Text = item.coreType.ToString();
+            }
         }
+
         private void btnOK_Click(object sender, EventArgs e)
         {
             if (SaveBase() != 0)
@@ -168,13 +151,18 @@ namespace v2rayN.Forms
                 return;
             }
 
+            if (SaveCoreType() != 0)
+            {
+                return;
+            }
+
             if (ConfigHandler.SaveConfig(ref config) == 0)
             {
-                this.DialogResult = DialogResult.OK;
+                DialogResult = DialogResult.OK;
             }
             else
             {
-                UI.ShowWarning(UIRes.I18N("OperationFailed"));
+                UI.ShowWarning(ResUI.OperationFailed);
             }
         }
 
@@ -196,54 +184,45 @@ namespace v2rayN.Forms
             string protocol = cmbprotocol.Text.TrimEx();
             bool udpEnabled = chkudpEnabled.Checked;
             bool sniffingEnabled = chksniffingEnabled.Checked;
+            bool allowLANConn = chkAllowLANConn.Checked;
             if (Utils.IsNullOrEmpty(localPort) || !Utils.IsNumberic(localPort))
             {
-                UI.Show(UIRes.I18N("FillLocalListeningPort"));
+                UI.Show(ResUI.FillLocalListeningPort);
                 return -1;
             }
             if (Utils.IsNullOrEmpty(protocol))
             {
-                UI.Show(UIRes.I18N("PleaseSelectProtocol"));
+                UI.Show(ResUI.PleaseSelectProtocol);
                 return -1;
             }
+
+            var remoteDNS = txtremoteDNS.Text.TrimEx();
+            var obj = Utils.ParseJson(remoteDNS);
+            if (obj != null && obj.ContainsKey("servers"))
+            {
+            }
+            else
+            {
+                if (remoteDNS.Contains("{") || remoteDNS.Contains("}"))
+                {
+                    UI.Show(ResUI.FillCorrectDNSText);
+                    return -1;
+                }
+            }
+
             config.inbound[0].localPort = Utils.ToInt(localPort);
             config.inbound[0].protocol = protocol;
             config.inbound[0].udpEnabled = udpEnabled;
             config.inbound[0].sniffingEnabled = sniffingEnabled;
+            config.inbound[0].allowLANConn = allowLANConn;
+            config.inbound[0].user = txtuser.Text;
+            config.inbound[0].pass = txtpass.Text;
 
-            //本地监听2
-            string localPort2 = txtlocalPort2.Text.TrimEx();
-            string protocol2 = cmbprotocol2.Text.TrimEx();
-            bool udpEnabled2 = chkudpEnabled2.Checked;
-            bool sniffingEnabled2 = chksniffingEnabled2.Checked;
-            if (chkAllowIn2.Checked)
+            if (config.inbound.Count > 1)
             {
-                if (Utils.IsNullOrEmpty(localPort2) || !Utils.IsNumberic(localPort2))
-                {
-                    UI.Show(UIRes.I18N("FillLocalListeningPort"));
-                    return -1;
-                }
-                if (Utils.IsNullOrEmpty(protocol2))
-                {
-                    UI.Show(UIRes.I18N("PleaseSelectProtocol"));
-                    return -1;
-                }
-                if (config.inbound.Count < 2)
-                {
-                    config.inbound.Add(new Mode.InItem());
-                }
-                config.inbound[1].localPort = Utils.ToInt(localPort2);
-                config.inbound[1].protocol = protocol2;
-                config.inbound[1].udpEnabled = udpEnabled2;
-                config.inbound[1].sniffingEnabled = sniffingEnabled2;
+                config.inbound.RemoveAt(1);
             }
-            else
-            {
-                if (config.inbound.Count > 1)
-                {
-                    config.inbound.RemoveAt(1);
-                }
-            }
+
 
             //日志     
             config.logEnabled = logEnabled;
@@ -252,12 +231,15 @@ namespace v2rayN.Forms
             //Mux
             config.muxEnabled = muxEnabled;
 
-            //remoteDNS
+            //remoteDNS          
             config.remoteDNS = txtremoteDNS.Text.TrimEx();
+            config.domainStrategy4Freedom = cmbdomainStrategy4Freedom.Text;
 
             config.defAllowInsecure = chkdefAllowInsecure.Checked;
 
             config.systemProxyExceptions = txtsystemProxyExceptions.Text.TrimEx();
+
+            config.systemProxyAdvancedProtocol = cmbSystemProxyAdvancedProtocol.Text.TrimEx();
 
             return 0;
         }
@@ -284,7 +266,7 @@ namespace v2rayN.Forms
                 || Utils.IsNullOrEmpty(readBufferSize) || !Utils.IsNumberic(readBufferSize)
                 || Utils.IsNullOrEmpty(writeBufferSize) || !Utils.IsNumberic(writeBufferSize))
             {
-                UI.Show(UIRes.I18N("FillKcpParameters"));
+                UI.Show(ResUI.FillKcpParameters);
                 return -1;
             }
             config.kcpItem.mtu = Utils.ToInt(mtu);
@@ -307,41 +289,53 @@ namespace v2rayN.Forms
             //开机自动启动
             Utils.SetAutoRun(chkAutoRun.Checked);
 
-            config.allowLANConn = chkAllowLANConn.Checked;
-
             bool lastEnableStatistics = config.enableStatistics;
             config.enableStatistics = chkEnableStatistics.Checked;
-            config.statisticsFreshRate = (int)cbFreshrate.SelectedValue;
+            config.statisticsFreshRate = Convert.ToInt32(numStatisticsFreshRate.Value);
+            if (config.statisticsFreshRate > 100 || config.statisticsFreshRate < 1)
+            {
+                config.statisticsFreshRate = 1;
+            }
+
             config.keepOlderDedupl = chkKeepOlderDedupl.Checked;
 
             config.ignoreGeoUpdateCore = chkIgnoreGeoUpdateCore.Checked;
-            if (cmbCoreType.SelectedIndex < 0 || cmbCoreType.SelectedIndex >= CoreTypeOrder.Length)
-                return -1;
-            config.coreType = CoreTypeOrder[cmbCoreType.SelectedIndex];
+            config.uiItem.enableAutoAdjustMainLvColWidth = chkEnableAutoAdjustMainLvColWidth.Checked;
+            config.enableSecurityProtocolTls13 = chkEnableSecurityProtocolTls13.Checked;
+
+            config.autoUpdateInterval = Utils.ToInt(txtautoUpdateInterval.Text);
+            config.autoUpdateSubInterval = Utils.ToInt(txtautoUpdateSubInterval.Text);
+            config.checkPreReleaseUpdate = chkEnableCheckPreReleaseUpdate.Checked;
+            config.trayMenuServersLimit = Utils.ToInt(txttrayMenuServersLimit.Text);
+            return 0;
+        }
+
+        private int SaveCoreType()
+        {
+            for (int k = 1; k <= config.coreTypeItem.Count; k++)
+            {
+                var item = config.coreTypeItem[k - 1];
+                item.coreType = (ECoreType)Enum.Parse(typeof(ECoreType), tabPageCoreType.Controls[$"cmbCoreType{k}"].Text);
+            }
 
             return 0;
         }
 
         private void btnClose_Click(object sender, EventArgs e)
         {
-            this.DialogResult = DialogResult.Cancel;
+            DialogResult = DialogResult.Cancel;
         }
 
-        private void chkAllowIn2_CheckedChanged(object sender, EventArgs e)
-        {
-            chkAllowIn2State();
-        }
-        private void chkAllowIn2State()
-        {
-            bool blAllow2 = chkAllowIn2.Checked;
-            txtlocalPort2.Enabled =
-            cmbprotocol2.Enabled =
-            chkudpEnabled2.Enabled = blAllow2;
-        }
 
         private void linkDnsObjectDoc_LinkClicked(object sender, LinkLabelLinkClickedEventArgs e)
         {
-            System.Diagnostics.Process.Start("https://www.v2fly.org/config/dns.html#dnsobject");
+            Process.Start("https://www.v2fly.org/config/dns.html#dnsobject");
         }
+
+        private void btnSetLoopback_Click(object sender, EventArgs e)
+        {
+            Process.Start(Utils.GetPath("EnableLoopback.exe"));
+        }
+
     }
 }

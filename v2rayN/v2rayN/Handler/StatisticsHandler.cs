@@ -1,261 +1,178 @@
+﻿using Grpc.Core;
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Globalization;
-using System.Text;
+using System.Net;
+using System.Net.Sockets;
 using System.Threading;
-using Newtonsoft.Json.Linq;
+using System.Threading.Tasks;
 using v2rayN.Mode;
+using v2rayN.Protos.Statistics;
 
 namespace v2rayN.Handler
 {
-    // Uses the core built-in statistics CLI instead of
-    // Grpc.Core. V2Ray and Xray have different CLI syntax. This avoids the native gRPC runtime that is unsuitable for
-    // the Windows XP / .NET Framework 4.0 target.
     class StatisticsHandler
     {
-        private readonly Config config_;
-        private readonly Action<ulong, ulong, List<ServerStatItem>> updateFunc_;
-        private readonly ServerStatistics serverStatistics_;
-        private Thread worker_;
-        private volatile bool stopping_;
-        private string lastError_ = string.Empty;
-        private ulong lastUp_;
-        private ulong lastDown_;
-        private string lastItemId_ = string.Empty;
-        private bool hasLastSample_;
+        private Mode.Config config_;
+        private ServerStatistics serverStatistics_;
+        private Channel channel_;
+        private StatsService.StatsServiceClient client_;
+        private bool exitFlag_;
 
-        public bool Enable { get; private set; }
-        public bool UpdateUI { get; set; }
+        Action<ulong, ulong, List<ServerStatItem>> updateFunc_;
 
-        public List<ServerStatItem> Statistic
+        public bool Enable
         {
-            get { return serverStatistics_.server; }
+            get; set;
         }
 
-        public StatisticsHandler(Config config, Action<ulong, ulong, List<ServerStatItem>> update)
+        public bool UpdateUI
         {
+            get; set;
+        }
+
+
+        public List<ServerStatItem> Statistic => serverStatistics_.server;
+
+        public StatisticsHandler(Mode.Config config, Action<ulong, ulong, List<ServerStatItem>> update)
+        {
+            //try
+            //{
+            //    if (Environment.Is64BitOperatingSystem)
+            //    {
+            //        FileManager.UncompressFile(Utils.GetPath("grpc_csharp_ext.x64.dll"), Resources.grpc_csharp_ext_x64_dll);
+            //    }
+            //    else
+            //    {
+            //        FileManager.UncompressFile(Utils.GetPath("grpc_csharp_ext.x86.dll"), Resources.grpc_csharp_ext_x86_dll);
+            //    }
+            //}
+            //catch (IOException ex)
+            //{
+            //    Utils.SaveLog(ex.Message, ex);
+
+            //}
+
             config_ = config;
-            updateFunc_ = update;
-            Enable = config != null && config.enableStatistics;
+            Enable = config.enableStatistics;
             UpdateUI = false;
-            serverStatistics_ = LoadStatisticsFromFile();
+            updateFunc_ = update;
+            exitFlag_ = false;
+
+            LoadFromFile();
+
+            GrpcInit();
+
+            Task.Run(Run);
         }
 
-        public void Run()
+        private void GrpcInit()
         {
-            if (!Enable || worker_ != null)
-                return;
-
-            stopping_ = false;
-            worker_ = new Thread(StatisticsLoop);
-            worker_.IsBackground = true;
-            worker_.Name = "v2rayN traffic statistics";
-            worker_.Start();
-        }
-
-        private void StatisticsLoop()
-        {
-            while (!stopping_)
+            if (channel_ == null)
             {
-                try
-                {
-                    PollStatistics();
-                }
-                catch (Exception ex)
-                {
-                    if (lastError_ != ex.Message)
-                    {
-                        lastError_ = ex.Message;
-                        Utils.SaveLog("Statistics polling failed: " + ex.Message, ex);
-                    }
-                }
+                Global.statePort = GetFreePort();
 
-                int delay = config_.statisticsFreshRate;
-                if (delay < 1000 || delay > 10000)
-                    delay = 1000;
-                int slept = 0;
-                while (!stopping_ && slept < delay)
-                {
-                    int part = Math.Min(200, delay - slept);
-                    Thread.Sleep(part);
-                    slept += part;
-                }
+                channel_ = new Channel($"{Global.Loopback}:{Global.statePort}", ChannelCredentials.Insecure);
+                channel_.ConnectAsync();
+                client_ = new StatsService.StatsServiceClient(channel_);
             }
-        }
-
-        private void PollStatistics()
-        {
-            if (config_.index < 0 || config_.index >= config_.vmess.Count)
-                return;
-
-            bool isV2RayCore = config_.coreType == ECoreType.v2ray_core_5_or_above
-                || config_.coreType == ECoreType.v2ray_core_below_5;
-            bool usesV2Ray5Arguments = config_.coreType == ECoreType.v2ray_core_5_or_above;
-            string coreName = isV2RayCore ? "v2ray.exe" : "xray.exe";
-            string corePath = Utils.GetPath(coreName);
-            if (!System.IO.File.Exists(corePath) && isV2RayCore)
-            {
-                string alternate = Utils.GetPath("wv2ray.exe");
-                if (System.IO.File.Exists(alternate))
-                    corePath = alternate;
-            }
-            if (!System.IO.File.Exists(corePath))
-                throw new Exception(UIRes.I18N("CoreNotFound") + coreName);
-
-            ProcessStartInfo info = new ProcessStartInfo();
-            info.FileName = corePath;
-            string server = "--server=127.0.0.1:" + Global.statePort.ToString(CultureInfo.InvariantCulture);
-            // V2Ray 5+ uses "stats -json"; V2Ray 4.x and Xray use "statsquery".
-            info.Arguments = usesV2Ray5Arguments
-                ? "api stats -json " + server
-                : "api statsquery " + server;
-            info.WorkingDirectory = Utils.StartupPath();
-            info.UseShellExecute = false;
-            info.CreateNoWindow = true;
-            info.RedirectStandardOutput = true;
-            info.RedirectStandardError = true;
-
-            StringBuilder output = new StringBuilder();
-            StringBuilder error = new StringBuilder();
-            using (Process process = new Process())
-            {
-                process.StartInfo = info;
-                process.OutputDataReceived += (sender, args) =>
-                {
-                    if (args.Data != null)
-                        lock (output) output.AppendLine(args.Data);
-                };
-                process.ErrorDataReceived += (sender, args) =>
-                {
-                    if (args.Data != null)
-                        lock (error) error.AppendLine(args.Data);
-                };
-
-                process.Start();
-                process.BeginOutputReadLine();
-                process.BeginErrorReadLine();
-                if (!process.WaitForExit(5000))
-                {
-                    try { process.Kill(); } catch { }
-                    throw new TimeoutException(UIRes.I18N("StatisticsApiTimeout"));
-                }
-                process.WaitForExit();
-            }
-
-            string json;
-            string errorText;
-            lock (output) json = output.ToString().Trim();
-            lock (error) errorText = error.ToString().Trim();
-            if (json.Length == 0)
-                throw new Exception(errorText.Length == 0 ? UIRes.I18N("StatisticsApiNoData") : errorText);
-
-            JObject result = JObject.Parse(json);
-            JArray values = result["stat"] as JArray;
-            if (values == null)
-                throw new Exception(UIRes.I18N("StatisticsApiInvalidFormat"));
-
-            ulong currentUp = 0;
-            ulong currentDown = 0;
-            foreach (JToken value in values)
-            {
-                string name = value["name"] == null ? string.Empty : value["name"].ToString();
-                ulong count;
-                if (!UInt64.TryParse(value["value"] == null ? "0" : value["value"].ToString(),
-                    NumberStyles.Integer, CultureInfo.InvariantCulture, out count))
-                    continue;
-
-                if (name == "outbound>>>proxy>>>traffic>>>uplink")
-                    currentUp = count;
-                else if (name == "outbound>>>proxy>>>traffic>>>downlink")
-                    currentDown = count;
-            }
-
-            string itemId = config_.vmess[config_.index].getItemId();
-            ulong up = 0;
-            ulong down = 0;
-            if (hasLastSample_ && itemId == lastItemId_)
-            {
-                up = currentUp >= lastUp_ ? currentUp - lastUp_ : currentUp;
-                down = currentDown >= lastDown_ ? currentDown - lastDown_ : currentDown;
-            }
-
-            lastUp_ = currentUp;
-            lastDown_ = currentDown;
-            lastItemId_ = itemId;
-            hasLastSample_ = true;
-            lastError_ = string.Empty;
-
-            ServerStatItem item = serverStatistics_.server.Find(x => x.itemId == itemId);
-            if (item == null)
-            {
-                item = new ServerStatItem();
-                item.itemId = itemId;
-                item.dateNow = DateTime.Now.Date.Ticks;
-                serverStatistics_.server.Add(item);
-            }
-
-            long today = DateTime.Now.Date.Ticks;
-            if (item.dateNow != today)
-            {
-                item.todayUp = 0;
-                item.todayDown = 0;
-                item.dateNow = today;
-            }
-
-            item.totalUp += up;
-            item.totalDown += down;
-            item.todayUp += up;
-            item.todayDown += down;
-
-            if (UpdateUI && updateFunc_ != null)
-                updateFunc_(up, down, serverStatistics_.server);
         }
 
         public void Close()
         {
-            stopping_ = true;
-            if (worker_ != null && worker_.IsAlive)
-            {
-                // PollStatistics waits at most five seconds for the core CLI.
-                // Wait for that bounded query to finish before a replacement worker starts.
-                try { worker_.Join(6000); } catch { }
-                if (worker_.IsAlive)
-                    Utils.SaveLog("Statistics worker did not stop within the expected timeout.");
-            }
-            SaveToFile();
-        }
-
-        private ServerStatistics LoadStatisticsFromFile()
-        {
-            ServerStatistics data = null;
             try
             {
-                string result = Utils.LoadResource(Utils.GetPath(Global.StatisticLogOverall));
-                if (!Utils.IsNullOrEmpty(result))
-                    data = Utils.FromJson<ServerStatistics>(result);
+                exitFlag_ = true;
+                channel_.ShutdownAsync();
             }
             catch (Exception ex)
             {
                 Utils.SaveLog(ex.Message, ex);
             }
+        }
 
-            if (data == null)
-                data = new ServerStatistics();
-            if (data.server == null)
-                data.server = new List<ServerStatItem>();
-
-            long ticks = DateTime.Now.Date.Ticks;
-            foreach (ServerStatItem item in data.server)
+        public void Run()
+        {
+            while (!exitFlag_)
             {
-                if (item.dateNow != ticks)
+                try
                 {
-                    item.todayUp = 0;
-                    item.todayDown = 0;
-                    item.dateNow = ticks;
+                    if (Enable && channel_.State == ChannelState.Ready)
+                    {
+                        QueryStatsResponse res = null;
+                        try
+                        {
+                            res = client_.QueryStats(new QueryStatsRequest() { Pattern = "", Reset = true });
+                        }
+                        catch (Exception ex)
+                        {
+                            //Utils.SaveLog(ex.Message, ex);
+                        }
+
+                        if (res != null)
+                        {
+                            string itemId = config_.indexId;
+                            ServerStatItem serverStatItem = GetServerStatItem(itemId);
+
+                            //TODO: parse output
+                            ParseOutput(res.Stat, out ulong up, out ulong down);
+
+                            serverStatItem.todayUp += up;
+                            serverStatItem.todayDown += down;
+                            serverStatItem.totalUp += up;
+                            serverStatItem.totalDown += down;
+
+                            if (UpdateUI)
+                            {
+                                updateFunc_(up, down, new List<ServerStatItem> { serverStatItem });
+                            }
+                        }
+                    }
+                    var sleep = config_.statisticsFreshRate < 1 ? 1 : config_.statisticsFreshRate;
+                    Thread.Sleep(1000 * sleep);
+                    channel_.ConnectAsync();
+                }
+                catch (Exception ex)
+                {
+                    //Utils.SaveLog(ex.Message, ex);
                 }
             }
-            return data;
+        }
+
+        public void LoadFromFile()
+        {
+            try
+            {
+                string result = Utils.LoadResource(Utils.GetPath(Global.StatisticLogOverall));
+                if (!Utils.IsNullOrEmpty(result))
+                {
+                    //转成Json
+                    serverStatistics_ = Utils.FromJson<ServerStatistics>(result);
+                }
+
+                if (serverStatistics_ == null)
+                {
+                    serverStatistics_ = new ServerStatistics();
+                }
+                if (serverStatistics_.server == null)
+                {
+                    serverStatistics_.server = new List<ServerStatItem>();
+                }
+
+                long ticks = DateTime.Now.Date.Ticks;
+                foreach (ServerStatItem item in serverStatistics_.server)
+                {
+                    if (item.dateNow != ticks)
+                    {
+                        item.todayUp = 0;
+                        item.todayDown = 0;
+                        item.dateNow = ticks;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Utils.SaveLog(ex.Message, ex);
+            }
         }
 
         public void SaveToFile()
@@ -272,14 +189,106 @@ namespace v2rayN.Handler
 
         public void ClearAllServerStatistics()
         {
-            foreach (ServerStatItem item in serverStatistics_.server)
+            if (serverStatistics_ != null)
             {
-                item.todayUp = 0;
-                item.todayDown = 0;
-                item.totalUp = 0;
-                item.totalDown = 0;
+                //foreach (var item in serverStatistics_.server)
+                //{
+                //    item.todayUp = 0;
+                //    item.todayDown = 0;
+                //    item.totalUp = 0;
+                //    item.totalDown = 0;
+                //    // update ui display to zero
+                //    updateFunc_(0, 0, new List<ServerStatItem> { item });
+                //}
+                serverStatistics_.server = new List<ServerStatItem>();
+
+                // update statistic json file
+                SaveToFile();
             }
-            SaveToFile();
+        }
+
+        private ServerStatItem GetServerStatItem(string itemId)
+        {
+            long ticks = DateTime.Now.Date.Ticks;
+            int cur = Statistic.FindIndex(item => item.itemId == itemId);
+            if (cur < 0)
+            {
+                Statistic.Add(new ServerStatItem
+                {
+                    itemId = itemId,
+                    totalUp = 0,
+                    totalDown = 0,
+                    todayUp = 0,
+                    todayDown = 0,
+                    dateNow = ticks
+                });
+                cur = Statistic.Count - 1;
+            }
+            if (Statistic[cur].dateNow != ticks)
+            {
+                Statistic[cur].todayUp = 0;
+                Statistic[cur].todayDown = 0;
+                Statistic[cur].dateNow = ticks;
+            }
+            return Statistic[cur];
+        }
+
+        private void ParseOutput(Google.Protobuf.Collections.RepeatedField<Stat> source, out ulong up, out ulong down)
+        {
+
+            up = 0; down = 0;
+            try
+            {
+
+                foreach (Stat stat in source)
+                {
+                    string name = stat.Name;
+                    long value = stat.Value;
+                    string[] nStr = name.Split(">>>".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
+                    string type = "";
+
+                    name = name.Trim();
+
+                    name = nStr[1];
+                    type = nStr[3];
+
+                    if (name == Global.agentTag)
+                    {
+                        if (type == "uplink")
+                        {
+                            up = (ulong)value;
+                        }
+                        else if (type == "downlink")
+                        {
+                            down = (ulong)value;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                //Utils.SaveLog(ex.Message, ex);
+            }
+        }
+
+        private int GetFreePort()
+        {
+            int defaultPort = 28123;
+            try
+            {
+                // TCP stack please do me a favor
+                TcpListener l = new TcpListener(IPAddress.Loopback, 0);
+                l.Start();
+                int port = ((IPEndPoint)l.LocalEndpoint).Port;
+                l.Stop();
+                return port;
+            }
+            catch (Exception ex)
+            {
+                // in case access denied
+                Utils.SaveLog(ex.Message, ex);
+                return defaultPort;
+            }
         }
     }
 }

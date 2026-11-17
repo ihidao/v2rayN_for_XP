@@ -31,6 +31,13 @@
             System.ComponentModel.ComponentResourceManager resources = new System.ComponentModel.ComponentResourceManager(typeof(AddServer2Form));
             this.btnClose = new System.Windows.Forms.Button();
             this.groupBox1 = new System.Windows.Forms.GroupBox();
+            this.label3 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.txtPreSocksPort = new System.Windows.Forms.TextBox();
+            this.btnEdit = new System.Windows.Forms.Button();
+            this.cmbCoreType = new System.Windows.Forms.ComboBox();
+            this.labCoreType = new System.Windows.Forms.Label();
+            this.btnBrowse = new System.Windows.Forms.Button();
             this.txtAddress = new System.Windows.Forms.TextBox();
             this.label13 = new System.Windows.Forms.Label();
             this.txtRemarks = new System.Windows.Forms.TextBox();
@@ -54,6 +61,13 @@
             // groupBox1
             // 
             resources.ApplyResources(this.groupBox1, "groupBox1");
+            this.groupBox1.Controls.Add(this.label3);
+            this.groupBox1.Controls.Add(this.label2);
+            this.groupBox1.Controls.Add(this.txtPreSocksPort);
+            this.groupBox1.Controls.Add(this.btnEdit);
+            this.groupBox1.Controls.Add(this.cmbCoreType);
+            this.groupBox1.Controls.Add(this.labCoreType);
+            this.groupBox1.Controls.Add(this.btnBrowse);
             this.groupBox1.Controls.Add(this.txtAddress);
             this.groupBox1.Controls.Add(this.label13);
             this.groupBox1.Controls.Add(this.txtRemarks);
@@ -61,6 +75,47 @@
             this.groupBox1.Controls.Add(this.label1);
             this.groupBox1.Name = "groupBox1";
             this.groupBox1.TabStop = false;
+            // 
+            // label3
+            // 
+            resources.ApplyResources(this.label3, "label3");
+            this.label3.Name = "label3";
+            // 
+            // label2
+            // 
+            resources.ApplyResources(this.label2, "label2");
+            this.label2.Name = "label2";
+            // 
+            // txtPreSocksPort
+            // 
+            resources.ApplyResources(this.txtPreSocksPort, "txtPreSocksPort");
+            this.txtPreSocksPort.Name = "txtPreSocksPort";
+            // 
+            // btnEdit
+            // 
+            resources.ApplyResources(this.btnEdit, "btnEdit");
+            this.btnEdit.Name = "btnEdit";
+            this.btnEdit.UseVisualStyleBackColor = true;
+            this.btnEdit.Click += new System.EventHandler(this.btnEdit_Click);
+            // 
+            // cmbCoreType
+            // 
+            resources.ApplyResources(this.cmbCoreType, "cmbCoreType");
+            this.cmbCoreType.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
+            this.cmbCoreType.FormattingEnabled = true;
+            this.cmbCoreType.Name = "cmbCoreType";
+            // 
+            // labCoreType
+            // 
+            resources.ApplyResources(this.labCoreType, "labCoreType");
+            this.labCoreType.Name = "labCoreType";
+            // 
+            // btnBrowse
+            // 
+            resources.ApplyResources(this.btnBrowse, "btnBrowse");
+            this.btnBrowse.Name = "btnBrowse";
+            this.btnBrowse.UseVisualStyleBackColor = true;
+            this.btnBrowse.Click += new System.EventHandler(this.btnBrowse_Click);
             // 
             // txtAddress
             // 
@@ -136,5 +191,12 @@
         private System.Windows.Forms.Panel panel2;
         private System.Windows.Forms.Label label13;
         private System.Windows.Forms.TextBox txtAddress;
+        private System.Windows.Forms.Button btnBrowse;
+        private System.Windows.Forms.ComboBox cmbCoreType;
+        private System.Windows.Forms.Label labCoreType;
+        private System.Windows.Forms.Button btnEdit;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.TextBox txtPreSocksPort;
+        private System.Windows.Forms.Label label3;
     }
 }

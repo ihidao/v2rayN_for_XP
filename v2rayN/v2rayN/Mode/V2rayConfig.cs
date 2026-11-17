@@ -25,7 +25,7 @@ namespace v2rayN.Mode
         /// 统计需要， 空对象
         /// </summary>
         public Stats stats { get; set; }
-       
+
         /// </summary>
         public API api { get; set; }
 
@@ -133,14 +133,15 @@ namespace v2rayN.Mode
         /// </summary>
         public List<UsersItem> clients { get; set; }
 
-        
+
         /// <summary>
         /// VLESS
         /// </summary>
         public string decryption { get; set; }
 
         public bool allowTransparent { get; set; }
-      
+
+        public List<AccountsItem> accounts { get; set; }
     }
 
     public class UsersItem
@@ -170,7 +171,7 @@ namespace v2rayN.Mode
         /// <summary>
         /// VLESS
         /// </summary>
-        public string flow { get; set; }         
+        public string flow { get; set; }
     }
     public class Sniffing
     {
@@ -223,6 +224,16 @@ namespace v2rayN.Mode
         /// 
         /// </summary>
         public Response response { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public string domainStrategy { get; set; }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        public int? userLevel { get; set; }
     }
 
     public class VnextItem
@@ -270,6 +281,11 @@ namespace v2rayN.Mode
         /// 
         /// </summary>
         public int level { get; set; }
+
+        /// <summary>
+        /// trojan
+        /// </summary>
+        public string flow { get; set; }
 
         /// <summary>
         /// 
@@ -399,10 +415,23 @@ namespace v2rayN.Mode
         /// 
         /// </summary>
         public string serverName { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public List<string> alpn
+        {
+            get; set;
+        }
+
+        /// <summary>
+        /// "chrome" | "firefox" | "safari" | "randomized"
+        /// </summary>
+        public string fingerprint { get; set; }
+
     }
 
     public class TcpSettings
-    {         
+    {
         /// <summary>
         /// 数据包头部伪装设置
         /// </summary>
@@ -466,7 +495,7 @@ namespace v2rayN.Mode
     }
 
     public class WsSettings
-    {      
+    {
         /// <summary>
         /// 
         /// </summary>
@@ -528,4 +557,15 @@ namespace v2rayN.Mode
         public bool multiMode { get; set; }
     }
 
+    public class AccountsItem
+    {
+        /// <summary>
+        /// 
+        /// </summary>
+        public string user { get; set; }
+        /// <summary>
+        /// 
+        /// </summary>
+        public string pass { get; set; }
+    }
 }

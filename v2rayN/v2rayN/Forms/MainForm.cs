@@ -1680,7 +1680,7 @@ namespace v2rayN.Forms
                 {
                     continue;
                 }
-                string name = item.remarks;
+                string name = ConfigHandler.GetRoutingRemarksForDisplay(item.remarks);
 
                 ToolStripMenuItem ts = new ToolStripMenuItem(name)
                 {

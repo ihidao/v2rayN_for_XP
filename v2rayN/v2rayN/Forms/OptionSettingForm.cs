@@ -142,7 +142,7 @@ namespace v2rayN.Forms
                 var item = config.coreTypeItem[k - 1];
                 ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(GetCoreTypeOptions());
                 tabPageCoreType.Controls[$"labCoreType{k}"].Text = item.configType.ToString();
-                tabPageCoreType.Controls[$"cmbCoreType{k}"].Text = CoreTypeToOption(item.coreType);
+                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).SelectedIndex = CoreTypeToOptionIndex(item.coreType);
             }
         }
 

@@ -563,6 +563,9 @@ namespace v2rayN.Forms
             Global.reloadV2ray = false;
             ConfigHandler.SaveConfig(ref config, false);
 
+            // Keep the traffic status field visible before the first successful API sample.
+            mainMsgControl.SetToolSslInfo("speed", "0/s↑ | 0/s↓");
+
             if (config.enableStatistics)
             {
                 try
@@ -577,11 +580,6 @@ namespace v2rayN.Forms
                     Utils.SaveLog("Statistics initialization failed: " + ex.Message, ex);
                 }
             }
-            else
-            {
-                mainMsgControl.SetToolSslInfo("speed", "0/s↑ | 0/s↓");
-            }
-
             ChangePACButtonStatus(config.sysProxyType);
 
             BeginInvoke(new Action(() =>

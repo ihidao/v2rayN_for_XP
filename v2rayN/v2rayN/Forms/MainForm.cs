@@ -493,7 +493,7 @@ namespace v2rayN.Forms
             List<ToolStripMenuItem> lst = new List<ToolStripMenuItem>();
             foreach (var item in config.groupItem)
             {
-                string name = item.remarks;
+                string name = ConfigHandler.GetRoutingRemarksForDisplay(item.remarks);
 
                 ToolStripMenuItem ts = new ToolStripMenuItem(name)
                 {
@@ -1689,7 +1689,7 @@ namespace v2rayN.Forms
                 if (config.routingIndex.Equals(k))
                 {
                     ts.Checked = true;
-                    mainMsgControl.SetToolSslInfo("routing", item.remarks);
+                    mainMsgControl.SetToolSslInfo("routing", ConfigHandler.GetRoutingRemarksForDisplay(item.remarks));
                 }
                 ts.Click += ts_Routing_Click;
                 lst.Add(ts);

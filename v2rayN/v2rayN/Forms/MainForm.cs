@@ -493,7 +493,7 @@ namespace v2rayN.Forms
             List<ToolStripMenuItem> lst = new List<ToolStripMenuItem>();
             foreach (var item in config.groupItem)
             {
-                string name = ConfigHandler.GetRoutingRemarksForDisplay(item.remarks);
+                string name = item.remarks;
 
                 ToolStripMenuItem ts = new ToolStripMenuItem(name)
                 {

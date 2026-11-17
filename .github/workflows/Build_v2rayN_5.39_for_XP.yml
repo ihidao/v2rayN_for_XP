@@ -10,8 +10,10 @@ jobs:
   Build_v2rayN_5_39_for_XP:
     runs-on: windows-2022
     steps:
-      - name: Checkout source
+      - name: Checkout v2rayN 5.39 XP source
         uses: actions/checkout@v4
+        with:
+          ref: v2rayN_5.39_XP
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v2
@@ -31,13 +33,13 @@ jobs:
       - name: Build main application (.NET Framework 4.0 x86)
         shell: pwsh
         run: |
-          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
+          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /m /p:Configuration=Release /p:Platform=AnyCPU /v:minimal
           if ($LASTEXITCODE -ne 0) { throw ".NET Framework 4.0 x86 build failed" }
 
       - name: Prepare build files
         shell: pwsh
         run: |
-          $main = ".\v2rayN\v2rayN\bin\x86\Release\net40"
+          $main = ".\v2rayN\v2rayN\bin\Release\net40"
           $out = Join-Path $env:GITHUB_WORKSPACE "publish"
 
           if (!(Test-Path $main)) { throw "Main application output not found: $main" }

@@ -1349,7 +1349,10 @@ namespace v2rayN.Forms
 
         private void ChangePACButtonStatus(ESysProxyType type)
         {
-            SysProxyHandle.UpdateSysProxy(config, false);
+            if (!SysProxyHandle.UpdateSysProxy(config, false))
+            {
+                AppendText(false, "System proxy update failed. See the application log for details.");
+            }
 
             for (int k = 0; k < menuSysAgentMode.DropDownItems.Count; k++)
             {

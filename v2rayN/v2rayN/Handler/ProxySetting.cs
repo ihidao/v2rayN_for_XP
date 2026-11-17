@@ -23,7 +23,7 @@ namespace v2rayN.Handler
                 throw new ArgumentOutOfRangeException("type");
             }
 
-            int optionCount = type == 1 ? 1 : (String.IsNullOrEmpty(exceptions) ? 2 : 3);
+            int optionCount = type == 1 ? 1 : (type == 2 ? 3 : (String.IsNullOrEmpty(exceptions) ? 2 : 3));
             InternetConnectionOption[] options = new InternetConnectionOption[optionCount];
             IntPtr[] allocatedStrings = new IntPtr[2];
             IntPtr optionsPtr = IntPtr.Zero;

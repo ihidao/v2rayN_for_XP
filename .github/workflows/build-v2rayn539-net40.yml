@@ -37,7 +37,7 @@ jobs:
       - name: Prepare build files
         shell: pwsh
         run: |
-          $main = ".\v2rayN\v2rayN\bin\x86\Release\net40"
+          $main = ".\v2rayN\v2rayN\bin\Release\net40"
           $out = Join-Path $env:GITHUB_WORKSPACE "publish"
 
           if (!(Test-Path $main)) { throw "Main application output not found: $main" }

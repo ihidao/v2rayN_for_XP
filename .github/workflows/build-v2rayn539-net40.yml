@@ -31,7 +31,7 @@ jobs:
       - name: Build main application (.NET Framework 4.0 x86)
         shell: pwsh
         run: |
-          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /m /p:Configuration=Release /p:Platform=x86 /v:minimal
+          msbuild ".\v2rayN\v2rayN\v2rayN.csproj" /m /p:Configuration=Release /p:Platform=AnyCPU /v:minimal
           if ($LASTEXITCODE -ne 0) { throw ".NET Framework 4.0 x86 build failed" }
 
       - name: Prepare build files

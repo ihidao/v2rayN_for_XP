@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 using v2rayN.Forms;
@@ -8,6 +9,9 @@ namespace v2rayN
 {
     static class Program
     {
+        // Restart after the current message loop and shutdown cleanup complete.
+        public static bool RestartForLanguageChange;
+
         /// <summary>
         /// 应用程序的主入口点。
         /// </summary>
@@ -38,7 +42,29 @@ namespace v2rayN
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);
-                Application.Run(new MainForm()); 
+                Application.Run(new MainForm());
+
+                // Release the single-instance mutex before starting the new process.
+                if (RestartForLanguageChange)
+                {
+                    try
+                    {
+                        Global.mutexObj?.Dispose();
+                        Global.mutexObj = null;
+
+                        Process.Start(new ProcessStartInfo
+                        {
+                            FileName = Application.ExecutablePath,
+                            WorkingDirectory = Application.StartupPath,
+                            UseShellExecute = true
+                        });
+                    }
+                    catch (Exception ex)
+                    {
+                        Utils.SaveLog("Unable to restart v2rayN after language change: " + ex.Message, ex);
+                        UI.ShowWarning("Unable to restart v2rayN. Please start it manually.");
+                    }
+                }
             }
             else
             {

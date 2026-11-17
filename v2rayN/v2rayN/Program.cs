@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Threading;
 using System.Windows.Forms;
 using v2rayN.Forms;
+using v2rayN.Resx;
 using v2rayN.Tool;
 
 namespace v2rayN
@@ -38,7 +39,13 @@ namespace v2rayN
 
                 //设置语言环境
                 string lang = Utils.RegReadValue(Global.MyRegPath, Global.MyRegKeyLanguage, "zh-Hans");
-                Thread.CurrentThread.CurrentUICulture = new System.Globalization.CultureInfo(lang);
+                var languageCulture = new System.Globalization.CultureInfo(lang);
+                Thread.CurrentThread.CurrentUICulture = languageCulture;
+
+                // Pin resource lookup to the selected UI language for all threads.
+                // Background core/process callbacks may run on threads that do not
+                // inherit CurrentUICulture on .NET Framework 4.0.
+                ResUI.Culture = languageCulture;
 
                 Application.EnableVisualStyles();
                 Application.SetCompatibleTextRenderingDefault(false);

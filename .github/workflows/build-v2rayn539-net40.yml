@@ -1,0 +1,43 @@
+name: Build v2rayN 5.39 XP (.NET Framework 4.0)
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - v2rayN_5.39_XP
+    paths:
+      - "v2rayN/**"
+      - ".github/workflows/build-v2rayn539-net40.yml"
+
+jobs:
+  build:
+    runs-on: windows-2022
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore .\v2rayN\v2rayN.sln
+
+      - name: Build x86
+        run: dotnet build .\v2rayN\v2rayN.sln --configuration Release --no-restore --verbosity minimal -p:Platform=x86
+
+      - name: Assemble package
+        shell: pwsh
+        run: |
+          $out = Join-Path $env:GITHUB_WORKSPACE "publish"
+          New-Item -ItemType Directory -Force -Path $out | Out-Null
+          Copy-Item ".\v2rayN\v2rayN\bin\Release\net40\*" $out -Recurse -Force
+          Copy-Item ".\v2rayN\v2rayUpgrade\bin\Release\net40\*" $out -Recurse -Force
+          Compress-Archive -Path (Join-Path $out "*") -DestinationPath ".\v2rayN-5.39-XP-net40-x86.zip" -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: v2rayN-5.39-XP-net40-x86
+          path: v2rayN-5.39-XP-net40-x86.zip

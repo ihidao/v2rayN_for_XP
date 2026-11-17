@@ -174,7 +174,7 @@ namespace v2rayN.Forms
                 }
 
                 ListViewItem lvItem = new ListViewItem(def);
-                Utils.AddSubItem(lvItem, "remarks", item.remarks);
+                Utils.AddSubItem(lvItem, "remarks", ConfigHandler.GetRoutingRemarksForDisplay(item.remarks));
                 Utils.AddSubItem(lvItem, "count", item.rules.Count.ToString());
                 Utils.AddSubItem(lvItem, "url", item.url);
                 Utils.AddSubItem(lvItem, "customIcon", item.customIcon);

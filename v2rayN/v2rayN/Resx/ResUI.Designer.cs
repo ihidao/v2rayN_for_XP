@@ -160,6 +160,33 @@ namespace v2rayN.Resx {
         }
         
         /// <summary>
+        ///   查找类似 Bypass Mainland (Whitelist) 的本地化字符串。
+        /// </summary>
+        internal static string RoutingBypassMainland {
+            get {
+                return ResourceManager.GetString("RoutingBypassMainland", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   查找类似 Blacklist 的本地化字符串。
+        /// </summary>
+        internal static string RoutingBlacklist {
+            get {
+                return ResourceManager.GetString("RoutingBlacklist", resourceCulture);
+            }
+        }
+
+        /// <summary>
+        ///   查找类似 Global 的本地化字符串。
+        /// </summary>
+        internal static string RoutingGlobal {
+            get {
+                return ResourceManager.GetString("RoutingGlobal", resourceCulture);
+            }
+        }
+
+        /// <summary>
         ///   查找类似 Failed to generate default configuration file 的本地化字符串。
         /// </summary>
         internal static string FailedGenDefaultConfiguration {

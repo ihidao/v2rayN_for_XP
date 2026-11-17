@@ -32,6 +32,20 @@ namespace v2rayN.Forms
             WindowState = FormWindowState.Minimized;
             HideForm();
             Text = Utils.GetVersion();
+
+            // Keep only Geo file updates available in this XP build.
+            tsbCheckUpdateN.Enabled = false;
+            tsbCheckUpdateCore.Enabled = false;
+            tsbCheckUpdateSagerNetCore.Enabled = false;
+            tsbCheckUpdateXrayCore.Enabled = false;
+            tsbCheckUpdateClashCore.Enabled = false;
+            tsbCheckUpdateClashMetaCore.Enabled = false;
+            tsbCheckUpdateGeo.Enabled = true;
+
+            // Hide promotion entry and its separator.
+            tsbPromotion.Visible = false;
+            toolStripSeparator11.Visible = false;
+
             Global.processJob = new Job();
 
             Application.ApplicationExit += (sender, args) =>
@@ -565,11 +579,10 @@ namespace v2rayN.Forms
             Global.reloadV2ray = false;
             ConfigHandler.SaveConfig(ref config, false);
 
-            // Keep the traffic status field visible before the first successful API sample.
-            mainMsgControl.SetToolSslInfo("speed", "0/s↑ | 0/s↓");
-
             if (config.enableStatistics)
             {
+                // Show a zeroed speed value until the first statistics sample arrives.
+                mainMsgControl.SetToolSslInfo("speed", "0/s↑ | 0/s↓");
                 try
                 {
                     statistics = new StatisticsHandler(config, UpdateStatisticsHandler);

@@ -918,13 +918,13 @@
     <value>230, 26</value>
   </data>
   <data name="tsbAbout.Text" xml:space="preserve">
-    <value>v2rayN Project</value>
+    <value>v2rayN for XP</value>
   </data>
   <data name="tsbV2rayWebsite.Size" type="System.Drawing.Size, System.Drawing">
     <value>230, 26</value>
   </data>
   <data name="tsbV2rayWebsite.Text" xml:space="preserve">
-    <value>V2Ray Website</value>
+    <value>V2Ray_Xray for XP</value>
   </data>
   <data name="toolStripSeparator12.Size" type="System.Drawing.Size, System.Drawing">
     <value>227, 6</value>

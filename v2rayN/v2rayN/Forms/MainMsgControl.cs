@@ -126,6 +126,12 @@ namespace v2rayN.Forms
 
         }
 
+        public void SetSpeedDisabled()
+        {
+            ComponentResourceManager resources = new ComponentResourceManager(typeof(MainMsgControl));
+            toolSslServerSpeed.Text = resources.GetString("toolSslServerSpeed.Text") ?? "SPEED Disabled";
+        }
+
         public void ScrollToCaret()
         {
             txtMsgBox.ScrollToCaret();

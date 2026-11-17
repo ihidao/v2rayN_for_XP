@@ -140,9 +140,12 @@ namespace v2rayN.Forms
             for (int k = 1; k <= config.coreTypeItem.Count; k++)
             {
                 var item = config.coreTypeItem[k - 1];
-                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(GetCoreTypeOptions());
+                ComboBox cmbCoreType = (ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"];
+                cmbCoreType.Items.AddRange(GetCoreTypeOptions());
+                cmbCoreType.Width = 220;
+                cmbCoreType.DropDownWidth = 230;
                 tabPageCoreType.Controls[$"labCoreType{k}"].Text = item.configType.ToString();
-                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).SelectedIndex = CoreTypeToOptionIndex(item.coreType);
+                cmbCoreType.SelectedIndex = CoreTypeToOptionIndex(item.coreType);
             }
         }
 

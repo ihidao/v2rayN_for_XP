@@ -90,10 +90,20 @@ namespace v2rayN.Forms
             //开机自动启动
             chkAutoRun.Checked = Utils.IsAutoRun();
 
-            chkEnableStatistics.Checked = false;
-            chkEnableStatistics.Enabled = false;
-            numStatisticsFreshRate.Enabled = false;
-            lbFreshrate.Enabled = false;
+            chkEnableStatistics.Checked = config.enableStatistics;
+            numStatisticsFreshRate.Minimum = 1;
+            numStatisticsFreshRate.Maximum = 100;
+            int statisticsRate = config.statisticsFreshRate;
+            if (statisticsRate < 1) statisticsRate = 1;
+            if (statisticsRate > 100) statisticsRate = 100;
+            numStatisticsFreshRate.Value = statisticsRate;
+            numStatisticsFreshRate.Enabled = chkEnableStatistics.Checked;
+            lbFreshrate.Enabled = chkEnableStatistics.Checked;
+            chkEnableStatistics.CheckedChanged += (sender, args) =>
+            {
+                numStatisticsFreshRate.Enabled = chkEnableStatistics.Checked;
+                lbFreshrate.Enabled = chkEnableStatistics.Checked;
+            };
             chkKeepOlderDedupl.Checked = config.keepOlderDedupl;
 
             chkIgnoreGeoUpdateCore.Checked = config.ignoreGeoUpdateCore;
@@ -292,9 +302,8 @@ namespace v2rayN.Forms
             //开机自动启动
             Utils.SetAutoRun(chkAutoRun.Checked);
 
-            // Traffic statistics are disabled in the XP/.NET 4.0 build.
-            config.enableStatistics = false;
-            config.statisticsFreshRate = 1;
+            config.enableStatistics = chkEnableStatistics.Checked;
+            config.statisticsFreshRate = (int)numStatisticsFreshRate.Value;
             if (config.statisticsFreshRate > 100 || config.statisticsFreshRate < 1)
             {
                 config.statisticsFreshRate = 1;

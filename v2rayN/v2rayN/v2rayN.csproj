@@ -39,6 +39,30 @@
     <Reference Include="System.Messaging" />
     <Reference Include="System.Net" />
     <Reference Include="System.Web" />
+    <Reference Include="System.Runtime">
+      <HintPath>$(NuGetPackageRoot)microsoft.bcl\1.1.10\lib\net40\System.Runtime.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Threading.Tasks">
+      <HintPath>$(NuGetPackageRoot)microsoft.bcl\1.1.10\lib\net40\System.Threading.Tasks.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Net.Http">
+      <HintPath>$(NuGetPackageRoot)microsoft.net.http\2.2.29\lib\net40\System.Net.Http.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.Extensions">
+      <HintPath>$(NuGetPackageRoot)microsoft.net.http\2.2.29\lib\net40\System.Net.Http.Extensions.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.Primitives">
+      <HintPath>$(NuGetPackageRoot)microsoft.net.http\2.2.29\lib\net40\System.Net.Http.Primitives.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="System.Net.Http.WebRequest">
+      <HintPath>$(NuGetPackageRoot)microsoft.net.http\2.2.29\lib\net40\System.Net.Http.WebRequest.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" PrivateAssets="All" />

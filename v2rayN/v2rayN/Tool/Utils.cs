@@ -845,13 +845,13 @@ namespace v2rayN
                 string location = GetExePath();
                 if (blFull)
                 {
-                    return string.Format("v2rayN - V{0} for XP - {1}",
+                    return string.Format("v2rayN v{0} for XP {1}",
                             FileVersionInfo.GetVersionInfo(location).FileVersion.ToString(),
-                            File.GetLastWriteTime(location).ToString("yyyy/MM/dd"));
+                            File.GetLastWriteTime(location).ToString("yyyy-MM-dd"));
                 }
                 else
                 {
-                    return string.Format("v2rayN/{0} for XP",
+                    return string.Format("v2rayN {0} for XP",
                         FileVersionInfo.GetVersionInfo(location).FileVersion.ToString());
                 }
             }

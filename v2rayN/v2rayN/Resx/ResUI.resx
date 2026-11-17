@@ -475,4 +475,8 @@
   <data name="NetFrameworkRequirementsTip" xml:space="preserve">
     <value>Normal use of this version requires .NET Framework 4.8</value>
   </data>
+  <data name="CoreTypeV2Ray5" xml:space="preserve"><value>v2ray_core (5.0 or above)</value></data>
+  <data name="CoreTypeV2RayLegacy" xml:space="preserve"><value>v2ray_core (below 5.0)</value></data>
+  <data name="CoreTypeXray1" xml:space="preserve"><value>xray_core (1.0 or above)</value></data>
+  <data name="CoreTypeXrayLegacy" xml:space="preserve"><value>xray_core (below 1.0)</value></data>
 </root>

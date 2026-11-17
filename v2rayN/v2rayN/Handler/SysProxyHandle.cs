@@ -1,25 +1,11 @@
-using Microsoft.Win32;
 using System;
-using System.ComponentModel;
-using System.Runtime.InteropServices;
 using v2rayN.Mode;
 using v2rayN.Tool;
 
 namespace v2rayN.Handler
 {
-    /// <summary>
-    /// Updates the current user's WinINet system proxy settings.
-    /// Use the WinINet API directly so this also works on Windows XP,
-    /// without depending on the bundled sysproxy.exe helper.
-    /// </summary>
     public static class SysProxyHandle
     {
-        private const string InternetSettingsKey =
-            @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
-
-        private const int InternetOptionRefresh = 37;
-        private const int InternetOptionSettingsChanged = 39;
-
         public static bool UpdateSysProxy(Config config, bool forceDisable)
         {
             if (config == null)
@@ -113,78 +99,33 @@ namespace v2rayN.Handler
 
         public static void SetIEProxy(bool global, string strProxy, string strExceptions)
         {
-            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsKey, true))
+            if (global)
             {
-                if (key == null)
+                if (!ProxySetting.SetProxy(strProxy, strExceptions, 2))
                 {
-                    throw new InvalidOperationException("Cannot open the current user's Internet Settings registry key.");
+                    throw new InvalidOperationException("WinINet rejected the system proxy settings.");
                 }
-
-                if (global)
-                {
-                    key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
-                    key.SetValue("ProxyServer", strProxy ?? string.Empty, RegistryValueKind.String);
-                    key.SetValue("ProxyOverride", strExceptions ?? string.Empty, RegistryValueKind.String);
-                }
-                else
-                {
-                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-                    key.SetValue("AutoConfigURL", strProxy ?? string.Empty, RegistryValueKind.String);
-                }
-
-                key.Flush();
             }
-
-            NotifyWinInetSettingsChanged();
+            else
+            {
+                if (!ProxySetting.SetProxy(strProxy, null, 4))
+                {
+                    throw new InvalidOperationException("WinINet rejected the automatic proxy configuration.");
+                }
+            }
         }
 
         public static bool ResetIEProxy()
         {
             try
             {
-                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsKey, true))
-                {
-                    if (key == null)
-                    {
-                        throw new InvalidOperationException("Cannot open the current user's Internet Settings registry key.");
-                    }
-
-                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
-                    key.Flush();
-                }
-
-                NotifyWinInetSettingsChanged();
-                return true;
+                return ProxySetting.UnsetProxy();
             }
             catch (Exception ex)
             {
                 Utils.SaveLog("Failed to clear Windows system proxy: " + ex.Message, ex);
                 return false;
             }
-        }
-
-        private static void NotifyWinInetSettingsChanged()
-        {
-            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOptionSettingsChanged, IntPtr.Zero, 0))
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-
-            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOptionRefresh, IntPtr.Zero, 0))
-            {
-                throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
-        }
-
-        private static class NativeMethods
-        {
-            [DllImport("wininet.dll", SetLastError = true)]
-            [return: MarshalAs(UnmanagedType.Bool)]
-            internal static extern bool InternetSetOption(
-                IntPtr hInternet,
-                int dwOption,
-                IntPtr lpBuffer,
-                int dwBufferLength);
         }
     }
 }

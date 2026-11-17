@@ -1637,8 +1637,20 @@ namespace v2rayN.Forms
         }
         private void SetCurrentLanguage(string value)
         {
+            string currentLanguage = Utils.RegReadValue(
+                Global.MyRegPath, Global.MyRegKeyLanguage, "zh-Hans");
+
+            if (string.Equals(currentLanguage, value, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
             Utils.RegWriteValue(Global.MyRegPath, Global.MyRegKeyLanguage, value);
-            //Application.Restart();
+
+            // Exit the current instance first. Program.Main restarts it after
+            // the message loop has ended and the single-instance mutex is released.
+            Program.RestartForLanguageChange = true;
+            Application.Exit();
         }
 
         #endregion

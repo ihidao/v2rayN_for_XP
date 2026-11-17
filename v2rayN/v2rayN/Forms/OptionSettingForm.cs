@@ -140,7 +140,7 @@ namespace v2rayN.Forms
             for (int k = 1; k <= config.coreTypeItem.Count; k++)
             {
                 var item = config.coreTypeItem[k - 1];
-                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(Global.coreTypes.ToArray());
+                ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(GetCoreTypeOptions());
                 tabPageCoreType.Controls[$"labCoreType{k}"].Text = item.configType.ToString();
                 tabPageCoreType.Controls[$"cmbCoreType{k}"].Text = CoreTypeToOption(item.coreType);
             }
@@ -322,41 +322,41 @@ namespace v2rayN.Forms
             return 0;
         }
 
-        private string CoreTypeToOption(ECoreType coreType)
+        private string[] GetCoreTypeOptions()
+        {
+            return new string[]
+            {
+                ResUI.ResourceManager.GetString("CoreTypeV2Ray5"),
+                ResUI.ResourceManager.GetString("CoreTypeV2RayLegacy"),
+                ResUI.ResourceManager.GetString("CoreTypeXray1"),
+                ResUI.ResourceManager.GetString("CoreTypeXrayLegacy"),
+                "SagerNet"
+            };
+        }
+
+        private int CoreTypeToOptionIndex(ECoreType coreType)
         {
             switch (coreType)
             {
-                case ECoreType.v2fly_v5:
-                    return "v2ray_core_5_or_above";
-                case ECoreType.v2fly:
-                    return "v2ray_core_below_5";
-                case ECoreType.Xray:
-                    return "xray_core_1_or_above";
-                case ECoreType.Xray_legacy:
-                    return "xray_core_below_1";
-                case ECoreType.SagerNet:
-                    return "SagerNet";
-                default:
-                    return "xray_core_1_or_above";
+                case ECoreType.v2fly_v5: return 0;
+                case ECoreType.v2fly: return 1;
+                case ECoreType.Xray: return 2;
+                case ECoreType.Xray_legacy: return 3;
+                case ECoreType.SagerNet: return 4;
+                default: return 2;
             }
         }
 
-        private ECoreType CoreTypeFromOption(string option)
+        private ECoreType CoreTypeFromOptionIndex(int index)
         {
-            switch (option)
+            switch (index)
             {
-                case "v2ray_core_5_or_above":
-                    return ECoreType.v2fly_v5;
-                case "v2ray_core_below_5":
-                    return ECoreType.v2fly;
-                case "xray_core_1_or_above":
-                    return ECoreType.Xray;
-                case "xray_core_below_1":
-                    return ECoreType.Xray_legacy;
-                case "SagerNet":
-                    return ECoreType.SagerNet;
-                default:
-                    return ECoreType.Xray;
+                case 0: return ECoreType.v2fly_v5;
+                case 1: return ECoreType.v2fly;
+                case 2: return ECoreType.Xray;
+                case 3: return ECoreType.Xray_legacy;
+                case 4: return ECoreType.SagerNet;
+                default: return ECoreType.Xray;
             }
         }
 
@@ -365,7 +365,7 @@ namespace v2rayN.Forms
             for (int k = 1; k <= config.coreTypeItem.Count; k++)
             {
                 var item = config.coreTypeItem[k - 1];
-                item.coreType = CoreTypeFromOption(tabPageCoreType.Controls[$"cmbCoreType{k}"].Text);
+                item.coreType = CoreTypeFromOptionIndex(((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).SelectedIndex);
             }
 
             return 0;

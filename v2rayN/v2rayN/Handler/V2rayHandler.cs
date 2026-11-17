@@ -268,7 +268,7 @@ namespace v2rayN.Handler
                     StartInfo = new ProcessStartInfo
                     {
                         FileName = fileName,
-                        Arguments = "-config stdin:",
+                        Arguments = coreInfo != null && coreInfo.coreType == ECoreType.v2fly_v5 ? "run -c stdin:" : "-config stdin:",
                         WorkingDirectory = Utils.StartupPath(),
                         UseShellExecute = false,
                         RedirectStandardInput = true,

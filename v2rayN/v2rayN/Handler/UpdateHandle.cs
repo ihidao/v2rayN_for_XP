@@ -172,7 +172,7 @@ namespace v2rayN.Handler
                 return;
             }
 
-            Task.Run(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 //Turn off system proxy
                 bool bSysProxyType = false;
@@ -247,7 +247,7 @@ namespace v2rayN.Handler
                 }
                 _updateFunc(true, $"{ResUI.MsgUpdateSubscriptionEnd}");
 
-            });
+            }).Unwrap();
         }
 
 
@@ -303,7 +303,7 @@ namespace v2rayN.Handler
 
         public void RunAvailabilityCheck(Action<bool, string> update)
         {
-            Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
                 var time = (new DownloadHandle()).RunAvailabilityCheck(null);
 

@@ -1267,8 +1267,8 @@ namespace v2rayN.Forms
                         UpdateStatisticsHandler(up, down, statisticsData);
                     });
                 }
+                // ObjectDisposedException derives from InvalidOperationException.
                 catch (InvalidOperationException) { }
-                catch (ObjectDisposedException) { }
                 return;
             }
 

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
-using System.IO.Compression;
 using System.Text;
+using ICSharpCode.SharpZipLib.GZip;
 using ICSharpCode.SharpZipLib.Zip;
 
 namespace v2rayN.Tool
@@ -30,7 +30,7 @@ namespace v2rayN.Tool
                 byte[] buffer = new byte[4096];
                 int n;
                 using (FileStream fs = File.Create(fileName))
-                using (GZipStream input = new GZipStream(new MemoryStream(content), CompressionMode.Decompress, false))
+                using (GZipInputStream input = new GZipInputStream(new MemoryStream(content)))
                 {
                     while ((n = input.Read(buffer, 0, buffer.Length)) > 0)
                         fs.Write(buffer, 0, n);

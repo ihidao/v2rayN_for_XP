@@ -1,215 +1,193 @@
-﻿using Microsoft.Win32;
 using System;
+using System.ComponentModel;
 using System.Runtime.InteropServices;
 
 namespace v2rayN.Handler
 {
-    class ProxySetting
+    /// <summary>
+    /// Sets WinINet per-connection proxy options. This API is supported by Windows XP
+    /// and updates the active LAN connection rather than only editing registry values.
+    /// </summary>
+    internal static class ProxySetting
     {
         public static bool UnsetProxy()
         {
             return SetProxy(null, null, 1);
         }
 
-        public static bool SetProxy(string strProxy, string exceptions, int type)
+        public static bool SetProxy(string proxyServer, string exceptions, int type)
         {
-            InternetPerConnOptionList list = new InternetPerConnOptionList();
-
-            int optionCount = 1;
-            if (type == 1)
+            if (type != 1 && type != 2 && type != 4)
             {
-                optionCount = 1;
-            }
-            else if (type == 2 || type == 4)
-            {
-                optionCount = Utils.IsNullOrEmpty(exceptions) ? 2 : 3;
+                throw new ArgumentOutOfRangeException("type");
             }
 
-            int m_Int = (int)PerConnFlags.PROXY_TYPE_DIRECT;
-            PerConnOption m_Option = PerConnOption.INTERNET_PER_CONN_FLAGS;
-            if (type == 2)
-            {
-                m_Int = (int)(PerConnFlags.PROXY_TYPE_DIRECT | PerConnFlags.PROXY_TYPE_PROXY);
-                m_Option = PerConnOption.INTERNET_PER_CONN_PROXY_SERVER;
-            }
-            else if (type == 4)
-            {
-                m_Int = (int)(PerConnFlags.PROXY_TYPE_DIRECT | PerConnFlags.PROXY_TYPE_AUTO_PROXY_URL);
-                m_Option = PerConnOption.INTERNET_PER_CONN_AUTOCONFIG_URL;
-            }
-
-            //int optionCount = Utils.IsNullOrEmpty(strProxy) ? 1 : (Utils.IsNullOrEmpty(exceptions) ? 2 : 3);
+            int optionCount = type == 1 ? 1 : (String.IsNullOrEmpty(exceptions) ? 2 : 3);
             InternetConnectionOption[] options = new InternetConnectionOption[optionCount];
-            // USE a proxy server ...
-            options[0].m_Option = PerConnOption.INTERNET_PER_CONN_FLAGS;
-            //options[0].m_Value.m_Int = (int)((optionCount < 2) ? PerConnFlags.PROXY_TYPE_DIRECT : (PerConnFlags.PROXY_TYPE_DIRECT | PerConnFlags.PROXY_TYPE_PROXY));
-            options[0].m_Value.m_Int = m_Int;
-            // use THIS proxy server
-            if (optionCount > 1)
+            IntPtr[] allocatedStrings = new IntPtr[2];
+            IntPtr optionsPtr = IntPtr.Zero;
+            IntPtr listPtr = IntPtr.Zero;
+
+            try
             {
-                options[1].m_Option = m_Option;
-                options[1].m_Value.m_StringPtr = Marshal.StringToHGlobalAuto(strProxy);
-                // except for these addresses ...
-                if (optionCount > 2)
+                int flags;
+                PerConnOption valueOption;
+
+                if (type == 1)
                 {
-                    options[2].m_Option = PerConnOption.INTERNET_PER_CONN_PROXY_BYPASS;
-                    options[2].m_Value.m_StringPtr = Marshal.StringToHGlobalAuto(exceptions);
+                    flags = (int)PerConnFlags.PROXY_TYPE_DIRECT;
+                    valueOption = PerConnOption.INTERNET_PER_CONN_FLAGS;
                 }
-            }
-
-            // default stuff
-            list.dwSize = Marshal.SizeOf(list);
-            list.szConnection = IntPtr.Zero;
-            list.dwOptionCount = options.Length;
-            list.dwOptionError = 0;
-
-
-            int optSize = Marshal.SizeOf(typeof(InternetConnectionOption));
-            // make a pointer out of all that ...
-            IntPtr optionsPtr = Marshal.AllocCoTaskMem(optSize * options.Length);
-            // copy the array over into that spot in memory ...
-            for (int i = 0; i < options.Length; ++i)
-            {
-                if (Environment.Is64BitOperatingSystem)
+                else if (type == 2)
                 {
-                    IntPtr opt = new IntPtr(optionsPtr.ToInt64() + (i * optSize));
-                    Marshal.StructureToPtr(options[i], opt, false);
+                    flags = (int)(PerConnFlags.PROXY_TYPE_DIRECT | PerConnFlags.PROXY_TYPE_PROXY);
+                    valueOption = PerConnOption.INTERNET_PER_CONN_PROXY_SERVER;
                 }
                 else
                 {
-                    IntPtr opt = new IntPtr(optionsPtr.ToInt32() + (i * optSize));
-                    Marshal.StructureToPtr(options[i], opt, false);
+                    flags = (int)(PerConnFlags.PROXY_TYPE_DIRECT | PerConnFlags.PROXY_TYPE_AUTO_PROXY_URL);
+                    valueOption = PerConnOption.INTERNET_PER_CONN_AUTOCONFIG_URL;
                 }
-            }
 
-            list.options = optionsPtr;
+                options[0].m_Option = PerConnOption.INTERNET_PER_CONN_FLAGS;
+                options[0].m_Value.m_Int = flags;
 
-            // and then make a pointer out of the whole list
-            IntPtr ipcoListPtr = Marshal.AllocCoTaskMem((int)list.dwSize);
-            Marshal.StructureToPtr(list, ipcoListPtr, false);
+                if (optionCount > 1)
+                {
+                    allocatedStrings[0] = Marshal.StringToHGlobalAuto(proxyServer ?? String.Empty);
+                    options[1].m_Option = valueOption;
+                    options[1].m_Value.m_StringPtr = allocatedStrings[0];
 
-            // and finally, call the API method!
-            int returnvalue = NativeMethods.InternetSetOption(IntPtr.Zero,
-               InternetOption.INTERNET_OPTION_PER_CONNECTION_OPTION,
-               ipcoListPtr, list.dwSize) ? -1 : 0;
-            if (returnvalue == 0)
-            {  // get the error codes, they might be helpful
-                returnvalue = Marshal.GetLastWin32Error();
-            }
-            // FREE the data ASAP
-            Marshal.FreeCoTaskMem(optionsPtr);
-            Marshal.FreeCoTaskMem(ipcoListPtr);
-            if (returnvalue > 0)
-            {  // throw the error codes, they might be helpful
-                //throw new Win32Exception(Marshal.GetLastWin32Error());
-            }
+                    if (optionCount > 2)
+                    {
+                        allocatedStrings[1] = Marshal.StringToHGlobalAuto(exceptions);
+                        options[2].m_Option = PerConnOption.INTERNET_PER_CONN_PROXY_BYPASS;
+                        options[2].m_Value.m_StringPtr = allocatedStrings[1];
+                    }
+                }
 
-            return (returnvalue < 0);
-        }
+                int optionSize = Marshal.SizeOf(typeof(InternetConnectionOption));
+                optionsPtr = Marshal.AllocCoTaskMem(optionSize * options.Length);
+                for (int i = 0; i < options.Length; i++)
+                {
+                    IntPtr optionPtr = new IntPtr(optionsPtr.ToInt64() + (i * optionSize));
+                    Marshal.StructureToPtr(options[i], optionPtr, false);
+                }
 
+                InternetPerConnOptionList list = new InternetPerConnOptionList();
+                list.dwSize = Marshal.SizeOf(typeof(InternetPerConnOptionList));
+                list.szConnection = IntPtr.Zero; // Default LAN connection
+                list.dwOptionCount = options.Length;
+                list.dwOptionError = 0;
+                list.options = optionsPtr;
 
-        #region WinInet structures
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct InternetPerConnOptionList
-        {
-            public int dwSize;               // size of the INTERNET_PER_CONN_OPTION_LIST struct
-            public IntPtr szConnection;         // connection name to set/query options
-            public int dwOptionCount;        // number of options to set/query
-            public int dwOptionError;           // on error, which option failed
-            //[MarshalAs(UnmanagedType.)]
-            public IntPtr options;
-        };
+                listPtr = Marshal.AllocCoTaskMem(list.dwSize);
+                Marshal.StructureToPtr(list, listPtr, false);
 
-        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
-        public struct InternetConnectionOption
-        {
-            static readonly int Size;
-            public PerConnOption m_Option;
-            public InternetConnectionOptionValue m_Value;
-            static InternetConnectionOption()
-            {
-                Size = Marshal.SizeOf(typeof(InternetConnectionOption));
-            }
+                if (!NativeMethods.InternetSetOption(
+                    IntPtr.Zero,
+                    InternetOption.INTERNET_OPTION_PER_CONNECTION_OPTION,
+                    listPtr,
+                    list.dwSize))
+                {
+                    throw new Win32Exception(Marshal.GetLastWin32Error());
+                }
 
-            // Nested Types
-            [StructLayout(LayoutKind.Explicit)]
-            public struct InternetConnectionOptionValue
-            {
-                // Fields
-                [FieldOffset(0)]
-                public System.Runtime.InteropServices.ComTypes.FILETIME m_FileTime;
-                [FieldOffset(0)]
-                public int m_Int;
-                [FieldOffset(0)]
-                public IntPtr m_StringPtr;
-            }
-        }
-        #endregion
-
-        #region WinInet enums
-        //
-        // options manifests for Internet{Query|Set}Option
-        //
-        public enum InternetOption : uint
-        {
-            INTERNET_OPTION_PER_CONNECTION_OPTION = 75
-        }
-
-        //
-        // Options used in INTERNET_PER_CONN_OPTON struct
-        //
-        public enum PerConnOption
-        {
-            INTERNET_PER_CONN_FLAGS = 1, // Sets or retrieves the connection type. The Value member will contain one or more of the values from PerConnFlags 
-            INTERNET_PER_CONN_PROXY_SERVER = 2, // Sets or retrieves a string containing the proxy servers.  
-            INTERNET_PER_CONN_PROXY_BYPASS = 3, // Sets or retrieves a string containing the URLs that do not use the proxy server.  
-            INTERNET_PER_CONN_AUTOCONFIG_URL = 4//, // Sets or retrieves a string containing the URL to the automatic configuration script.  
-
-        }
-
-        //
-        // PER_CONN_FLAGS
-        //
-        [Flags]
-        public enum PerConnFlags
-        {
-            PROXY_TYPE_DIRECT = 0x00000001,  // direct to net
-            PROXY_TYPE_PROXY = 0x00000002,  // via named proxy
-            PROXY_TYPE_AUTO_PROXY_URL = 0x00000004,  // autoproxy URL
-            PROXY_TYPE_AUTO_DETECT = 0x00000008   // use autoproxy detection
-        }
-        #endregion
-
-        internal static class NativeMethods
-        {
-            [DllImport("WinInet.dll", SetLastError = true, CharSet = CharSet.Auto)]
-            [return: MarshalAs(UnmanagedType.Bool)]
-            public static extern bool InternetSetOption(IntPtr hInternet, InternetOption dwOption, IntPtr lpBuffer, int dwBufferLength);
-        }
-
-        //判断是否使用代理
-        public static bool UsedProxy()
-        {
-            RegistryKey rk = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true);
-            if (rk.GetValue("ProxyEnable").ToString() == "1")
-            {
-                rk.Close();
+                NotifySettingsChanged();
                 return true;
             }
-            else
+            finally
             {
-                rk.Close();
-                return false;
+                if (listPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeCoTaskMem(listPtr);
+                }
+                if (optionsPtr != IntPtr.Zero)
+                {
+                    Marshal.FreeCoTaskMem(optionsPtr);
+                }
+                for (int i = 0; i < allocatedStrings.Length; i++)
+                {
+                    if (allocatedStrings[i] != IntPtr.Zero)
+                    {
+                        Marshal.FreeHGlobal(allocatedStrings[i]);
+                    }
+                }
             }
         }
-        //获得代理的IP和端口
-        public static string GetProxyProxyServer()
-        {
-            RegistryKey rk = Registry.CurrentUser.OpenSubKey(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings", true);
-            string ProxyServer = rk.GetValue("ProxyServer").ToString();
-            rk.Close();
-            return ProxyServer;
 
+        private static void NotifySettingsChanged()
+        {
+            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOption.INTERNET_OPTION_SETTINGS_CHANGED, IntPtr.Zero, 0))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+
+            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOption.INTERNET_OPTION_REFRESH, IntPtr.Zero, 0))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct InternetPerConnOptionList
+        {
+            public int dwSize;
+            public IntPtr szConnection;
+            public int dwOptionCount;
+            public int dwOptionError;
+            public IntPtr options;
+        }
+
+        [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Auto)]
+        private struct InternetConnectionOption
+        {
+            public PerConnOption m_Option;
+            public InternetConnectionOptionValue m_Value;
+        }
+
+        [StructLayout(LayoutKind.Explicit)]
+        private struct InternetConnectionOptionValue
+        {
+            [FieldOffset(0)]
+            public int m_Int;
+
+            [FieldOffset(0)]
+            public IntPtr m_StringPtr;
+        }
+
+        private enum InternetOption : int
+        {
+            INTERNET_OPTION_PER_CONNECTION_OPTION = 75,
+            INTERNET_OPTION_REFRESH = 37,
+            INTERNET_OPTION_SETTINGS_CHANGED = 39
+        }
+
+        private enum PerConnOption : int
+        {
+            INTERNET_PER_CONN_FLAGS = 1,
+            INTERNET_PER_CONN_PROXY_SERVER = 2,
+            INTERNET_PER_CONN_PROXY_BYPASS = 3,
+            INTERNET_PER_CONN_AUTOCONFIG_URL = 4
+        }
+
+        [Flags]
+        private enum PerConnFlags : int
+        {
+            PROXY_TYPE_DIRECT = 0x00000001,
+            PROXY_TYPE_PROXY = 0x00000002,
+            PROXY_TYPE_AUTO_PROXY_URL = 0x00000004
+        }
+
+        private static class NativeMethods
+        {
+            [DllImport("wininet.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool InternetSetOption(
+                IntPtr hInternet,
+                InternetOption dwOption,
+                IntPtr lpBuffer,
+                int dwBufferLength);
         }
     }
 }

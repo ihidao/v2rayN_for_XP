@@ -1,6 +1,7 @@
 using System;
 using System.ComponentModel;
 using System.Runtime.InteropServices;
+using Microsoft.Win32;
 
 namespace v2rayN.Handler
 {
@@ -113,6 +114,25 @@ namespace v2rayN.Handler
                         Marshal.FreeHGlobal(allocatedStrings[i]);
                     }
                 }
+            }
+        }
+
+
+        public static bool UsedProxy()
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
+                @"Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", false))
+            {
+                return key != null && Convert.ToInt32(key.GetValue("ProxyEnable", 0)) == 1;
+            }
+        }
+
+        public static string GetProxyProxyServer()
+        {
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(
+                @"Software\\Microsoft\\Windows\\CurrentVersion\\Internet Settings", false))
+            {
+                return key == null ? String.Empty : Convert.ToString(key.GetValue("ProxyServer", String.Empty));
             }
         }
 

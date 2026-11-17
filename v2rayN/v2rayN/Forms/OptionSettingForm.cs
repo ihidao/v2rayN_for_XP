@@ -142,7 +142,7 @@ namespace v2rayN.Forms
                 var item = config.coreTypeItem[k - 1];
                 ((ComboBox)tabPageCoreType.Controls[$"cmbCoreType{k}"]).Items.AddRange(Global.coreTypes.ToArray());
                 tabPageCoreType.Controls[$"labCoreType{k}"].Text = item.configType.ToString();
-                tabPageCoreType.Controls[$"cmbCoreType{k}"].Text = item.coreType.ToString();
+                tabPageCoreType.Controls[$"cmbCoreType{k}"].Text = CoreTypeToOption(item.coreType);
             }
         }
 
@@ -322,12 +322,50 @@ namespace v2rayN.Forms
             return 0;
         }
 
+        private string CoreTypeToOption(ECoreType coreType)
+        {
+            switch (coreType)
+            {
+                case ECoreType.v2fly_v5:
+                    return "v2ray_core_5_or_above";
+                case ECoreType.v2fly:
+                    return "v2ray_core_below_5";
+                case ECoreType.Xray:
+                    return "xray_core_1_or_above";
+                case ECoreType.Xray_legacy:
+                    return "xray_core_below_1";
+                case ECoreType.SagerNet:
+                    return "SagerNet";
+                default:
+                    return "xray_core_1_or_above";
+            }
+        }
+
+        private ECoreType CoreTypeFromOption(string option)
+        {
+            switch (option)
+            {
+                case "v2ray_core_5_or_above":
+                    return ECoreType.v2fly_v5;
+                case "v2ray_core_below_5":
+                    return ECoreType.v2fly;
+                case "xray_core_1_or_above":
+                    return ECoreType.Xray;
+                case "xray_core_below_1":
+                    return ECoreType.Xray_legacy;
+                case "SagerNet":
+                    return ECoreType.SagerNet;
+                default:
+                    return ECoreType.Xray;
+            }
+        }
+
         private int SaveCoreType()
         {
             for (int k = 1; k <= config.coreTypeItem.Count; k++)
             {
                 var item = config.coreTypeItem[k - 1];
-                item.coreType = (ECoreType)Enum.Parse(typeof(ECoreType), tabPageCoreType.Controls[$"cmbCoreType{k}"].Text);
+                item.coreType = CoreTypeFromOption(tabPageCoreType.Controls[$"cmbCoreType{k}"].Text);
             }
 
             return 0;

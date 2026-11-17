@@ -6,6 +6,7 @@ using v2rayN.Mode;
 using v2rayN.Base;
 using System.Linq;
 using v2rayN.Tool;
+using v2rayN.Resx;
 using System.Threading.Tasks;
 
 namespace v2rayN.Handler
@@ -1481,6 +1482,21 @@ namespace v2rayN.Handler
             ToJsonFile(config);
 
             return 0;
+        }
+
+        public static string GetRoutingRemarksForDisplay(string remarks)
+        {
+            switch (remarks)
+            {
+                case "绕过大陆(Whitelist)":
+                    return ResUI.RoutingBypassMainland;
+                case "黑名单(Blacklist)":
+                    return ResUI.RoutingBlacklist;
+                case "全局(Global)":
+                    return ResUI.RoutingGlobal;
+                default:
+                    return remarks ?? string.Empty;
+            }
         }
 
         public static int InitBuiltinRouting(ref Config config, bool blImportAdvancedRules = false)

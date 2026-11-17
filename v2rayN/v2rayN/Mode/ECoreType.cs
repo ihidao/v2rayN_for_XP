@@ -13,6 +13,7 @@ namespace v2rayN.Mode
         naiveproxy = 22,
         tuic = 23,
         sing_box = 24,
-        v2rayN = 99
+        v2rayN = 99,
+        Xray_legacy = 5
     }
 }

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Diagnostics;
 using System.IO;
-using System.IO.Compression;
+using ICSharpCode.SharpZipLib.Zip;
 using System.Text;
 using System.Web;
 using System.Windows.Forms;
@@ -70,31 +70,37 @@ namespace v2rayUpgrade
                 string startKey = "v2rayN/";
 
 
-                using (ZipArchive archive = ZipFile.OpenRead(fileName))
+                using (ZipFile archive = new ZipFile(fileName))
                 {
-                    foreach (ZipArchiveEntry entry in archive.Entries)
+                    string rootPath = Path.GetFullPath(StartupPath()).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar)
+                        + Path.DirectorySeparatorChar;
+                    foreach (ZipEntry entry in archive)
                     {
                         try
                         {
-                            if (entry.Length == 0)
-                            {
+                            if (entry.IsDirectory || entry.Size <= 0)
                                 continue;
-                            }
-                            string fullName = entry.FullName;
-                            if (fullName.StartsWith(startKey))
-                            {
-                                fullName = fullName.Substring(startKey.Length, fullName.Length - startKey.Length);
-                            }
-                            if (Application.ExecutablePath.ToLower() == GetPath(fullName).ToLower())
-                            {
+
+                            string fullName = entry.Name;
+                            if (fullName.StartsWith(startKey, StringComparison.OrdinalIgnoreCase))
+                                fullName = fullName.Substring(startKey.Length);
+
+                            string normalizedName = fullName.Replace('/', Path.DirectorySeparatorChar)
+                                .Replace('\\', Path.DirectorySeparatorChar);
+                            string entryOutputPath = Path.GetFullPath(Path.Combine(rootPath, normalizedName));
+                            if (!entryOutputPath.StartsWith(rootPath, StringComparison.OrdinalIgnoreCase))
+                                throw new IOException("Unsafe ZIP entry path: " + fullName);
+
+                            if (string.Equals(Application.ExecutablePath, entryOutputPath, StringComparison.OrdinalIgnoreCase))
                                 File.Move(Application.ExecutablePath, thisAppOldFile);
-                            }
 
-                            string entryOuputPath = GetPath(fullName);
+                            string directory = Path.GetDirectoryName(entryOutputPath);
+                            if (!Directory.Exists(directory))
+                                Directory.CreateDirectory(directory);
 
-                            FileInfo fileInfo = new FileInfo(entryOuputPath);
-                            fileInfo.Directory.Create();
-                            entry.ExtractToFile(entryOuputPath, true);
+                            using (Stream input = archive.GetInputStream(entry))
+                            using (FileStream output = File.Create(entryOutputPath))
+                                input.CopyTo(output);
                         }
                         catch (Exception ex)
                         {

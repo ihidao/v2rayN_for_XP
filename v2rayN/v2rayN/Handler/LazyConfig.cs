@@ -61,6 +61,10 @@ namespace v2rayN.Handler
             {
                 InitCoreInfo();
             }
+            if (coreType == ECoreType.Xray_legacy)
+            {
+                return coreInfos.Where(t => t.coreType == ECoreType.Xray).FirstOrDefault();
+            }
             return coreInfos.Where(t => t.coreType == coreType).FirstOrDefault();
         }
 

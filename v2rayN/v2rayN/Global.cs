@@ -240,7 +240,7 @@ namespace v2rayN
         public static int statePort
         {
             get; set;
-        }
+        } = 10085;
 
         public static Job processJob
         {

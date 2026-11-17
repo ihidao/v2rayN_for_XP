@@ -1,57 +1,33 @@
-﻿
+using Microsoft.Win32;
 using System;
-using System.Diagnostics;
-using System.IO;
-using System.Text;
-using System.Threading;
+using System.ComponentModel;
+using System.Runtime.InteropServices;
 using v2rayN.Mode;
-using v2rayN.Properties;
 using v2rayN.Tool;
 
 namespace v2rayN.Handler
 {
+    /// <summary>
+    /// Updates the current user's WinINet system proxy settings.
+    /// Use the WinINet API directly so this also works on Windows XP,
+    /// without depending on the bundled sysproxy.exe helper.
+    /// </summary>
     public static class SysProxyHandle
     {
-        //private const string _userWininetConfigFile = "user-wininet.json";
+        private const string InternetSettingsKey =
+            @"Software\Microsoft\Windows\CurrentVersion\Internet Settings";
 
-        //private static string _queryStr;
-
-        // In general, this won't change
-        // format:
-        //  <flags><CR-LF>
-        //  <proxy-server><CR-LF>
-        //  <bypass-list><CR-LF>
-        //  <pac-url>
-        private static SysproxyConfig _userSettings = null;
-
-        enum RET_ERRORS : int
-        {
-            RET_NO_ERROR = 0,
-            INVALID_FORMAT = 1,
-            NO_PERMISSION = 2,
-            SYSCALL_FAILED = 3,
-            NO_MEMORY = 4,
-            INVAILD_OPTION_COUNT = 5,
-        };
-
-        static SysProxyHandle()
-        {
-            try
-            {
-                FileManager.UncompressFile(Utils.GetTempPath("sysproxy.exe"),
-                    Environment.Is64BitOperatingSystem ? Resources.sysproxy64_exe : Resources.sysproxy_exe);
-            }
-            catch (IOException ex)
-            {
-                Utils.SaveLog(ex.Message, ex);
-            }
-        }
-
+        private const int InternetOptionRefresh = 37;
+        private const int InternetOptionSettingsChanged = 39;
 
         public static bool UpdateSysProxy(Config config, bool forceDisable)
         {
-            var type = config.sysProxyType;
+            if (config == null)
+            {
+                return false;
+            }
 
+            ESysProxyType type = config.sysProxyType;
             if (forceDisable && type == ESysProxyType.ForcedChange)
             {
                 type = ESysProxyType.ForcedClear;
@@ -59,172 +35,156 @@ namespace v2rayN.Handler
 
             try
             {
-                int port = config.GetLocalPort(Global.InboundHttp);
-                int portSocks = config.GetLocalPort(Global.InboundSocks);
-                if (port <= 0)
+                if (type == ESysProxyType.ForcedClear)
+                {
+                    return ResetIEProxy();
+                }
+
+                if (type == ESysProxyType.Unchanged)
+                {
+                    // This mode deliberately leaves the current Windows proxy untouched.
+                    return true;
+                }
+
+                if (type != ESysProxyType.ForcedChange)
                 {
                     return false;
                 }
-                if (type == ESysProxyType.ForcedChange)
-                {
-                    var strExceptions = $"{config.constItem.defIEProxyExceptions};{config.systemProxyExceptions}";
 
-                    var strProxy = string.Empty;
-                    if (Utils.IsNullOrEmpty(config.systemProxyAdvancedProtocol))
-                    {
-                        strProxy = $"{Global.Loopback}:{port}";
-                    }
-                    else
-                    {
-                        strProxy = config.systemProxyAdvancedProtocol
-                            .Replace("{ip}", Global.Loopback)
-                            .Replace("{http_port}", port.ToString())
-                            .Replace("{socks_port}", portSocks.ToString());
-                    }
-                    SetIEProxy(true, strProxy, strExceptions);
-                }
-                else if (type == ESysProxyType.ForcedClear)
+                int socksPort = GetSocksPort(config);
+                int httpPort = socksPort + 1;
+                if (socksPort <= 0 || httpPort > 65535)
                 {
-                    ResetIEProxy();
+                    throw new InvalidOperationException("The local SOCKS/HTTP inbound ports are invalid.");
                 }
-                else if (type == ESysProxyType.Unchanged)
+
+                string exceptions = string.Join(";",
+                    new string[]
+                    {
+                        config.constItem == null ? string.Empty : config.constItem.defIEProxyExceptions,
+                        config.systemProxyExceptions
+                    });
+
+                string proxy;
+                if (Utils.IsNullOrEmpty(config.systemProxyAdvancedProtocol))
                 {
+                    proxy = Global.Loopback + ":" + httpPort;
                 }
+                else
+                {
+                    proxy = config.systemProxyAdvancedProtocol
+                        .Replace("{ip}", Global.Loopback)
+                        .Replace("{http_port}", httpPort.ToString())
+                        .Replace("{socks_port}", socksPort.ToString());
+                }
+
+                SetIEProxy(true, proxy, exceptions);
+                return true;
             }
             catch (Exception ex)
             {
-                Utils.SaveLog(ex.Message, ex);
+                Utils.SaveLog("Failed to update Windows system proxy: " + ex.Message, ex);
+                return false;
             }
-            return true;
+        }
+
+        private static int GetSocksPort(Config config)
+        {
+            if (config.inbound == null)
+            {
+                return 0;
+            }
+
+            foreach (var inbound in config.inbound)
+            {
+                if (inbound != null && inbound.protocol == Global.InboundSocks)
+                {
+                    return inbound.localPort;
+                }
+            }
+
+            return 0;
         }
 
         public static void ResetIEProxy4WindowsShutDown()
         {
-            try
-            {
-                //TODO To be verified
-                Utils.RegWriteValue(@"Software\Microsoft\Windows\CurrentVersion\Internet Settings", "ProxyEnable", 0);
-            }
-            catch
-            {
-            }
+            ResetIEProxy();
         }
-
 
         public static void SetIEProxy(bool global, string strProxy, string strExceptions)
         {
-            string arguments = global
-                ? $"global {strProxy} {strExceptions}"
-                : $"pac {strProxy}";
+            using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsKey, true))
+            {
+                if (key == null)
+                {
+                    throw new InvalidOperationException("Cannot open the current user's Internet Settings registry key.");
+                }
 
-            ExecSysproxy(arguments);
+                if (global)
+                {
+                    key.SetValue("ProxyEnable", 1, RegistryValueKind.DWord);
+                    key.SetValue("ProxyServer", strProxy ?? string.Empty, RegistryValueKind.String);
+                    key.SetValue("ProxyOverride", strExceptions ?? string.Empty, RegistryValueKind.String);
+                }
+                else
+                {
+                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                    key.SetValue("AutoConfigURL", strProxy ?? string.Empty, RegistryValueKind.String);
+                }
+
+                key.Flush();
+            }
+
+            NotifyWinInetSettingsChanged();
         }
 
-        // set system proxy to 1 (null) (null) (null)
         public static bool ResetIEProxy()
         {
             try
             {
-                // clear user-wininet.json
-                //_userSettings = new SysproxyConfig();
-                //Save();
-                // clear system setting
-                ExecSysproxy("set 1 - - -");
+                using (RegistryKey key = Registry.CurrentUser.OpenSubKey(InternetSettingsKey, true))
+                {
+                    if (key == null)
+                    {
+                        throw new InvalidOperationException("Cannot open the current user's Internet Settings registry key.");
+                    }
+
+                    key.SetValue("ProxyEnable", 0, RegistryValueKind.DWord);
+                    key.Flush();
+                }
+
+                NotifyWinInetSettingsChanged();
+                return true;
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                Utils.SaveLog("Failed to clear Windows system proxy: " + ex.Message, ex);
                 return false;
             }
-
-            return true;
         }
 
-        private static void ExecSysproxy(string arguments)
+        private static void NotifyWinInetSettingsChanged()
         {
-            // using event to avoid hanging when redirect standard output/error
-            // ref: https://stackoverflow.com/questions/139593/processstartinfo-hanging-on-waitforexit-why
-            // and http://blog.csdn.net/zhangweixing0/article/details/7356841
-            using (AutoResetEvent outputWaitHandle = new AutoResetEvent(false))
-            using (AutoResetEvent errorWaitHandle = new AutoResetEvent(false))
+            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOptionSettingsChanged, IntPtr.Zero, 0))
             {
-                using (Process process = new Process())
-                {
-                    // Configure the process using the StartInfo properties.
-                    process.StartInfo.FileName = Utils.GetTempPath("sysproxy.exe");
-                    process.StartInfo.Arguments = arguments;
-                    process.StartInfo.WorkingDirectory = Utils.GetTempPath();
-                    process.StartInfo.WindowStyle = ProcessWindowStyle.Hidden;
-                    process.StartInfo.UseShellExecute = false;
-                    process.StartInfo.RedirectStandardError = true;
-                    process.StartInfo.RedirectStandardOutput = true;
+                throw new Win32Exception(Marshal.GetLastWin32Error());
+            }
 
-                    // Need to provide encoding info, or output/error strings we got will be wrong.
-                    process.StartInfo.StandardOutputEncoding = Encoding.Unicode;
-                    process.StartInfo.StandardErrorEncoding = Encoding.Unicode;
-
-                    process.StartInfo.CreateNoWindow = true;
-
-                    StringBuilder output = new StringBuilder();
-                    StringBuilder error = new StringBuilder();
-
-                    process.OutputDataReceived += (sender, e) =>
-                    {
-                        if (e.Data == null)
-                        {
-                            outputWaitHandle.Set();
-                        }
-                        else
-                        {
-                            output.AppendLine(e.Data);
-                        }
-                    };
-                    process.ErrorDataReceived += (sender, e) =>
-                    {
-                        if (e.Data == null)
-                        {
-                            errorWaitHandle.Set();
-                        }
-                        else
-                        {
-                            error.AppendLine(e.Data);
-                        }
-                    };
-                    try
-                    {
-                        process.Start();
-
-                        process.BeginErrorReadLine();
-                        process.BeginOutputReadLine();
-
-                        process.WaitForExit();
-                    }
-                    catch (System.ComponentModel.Win32Exception e)
-                    {
-
-                        // log the arguments
-                        throw new Exception(process.StartInfo.Arguments);
-                    }
-                    string stderr = error.ToString();
-                    string stdout = output.ToString();
-
-                    int exitCode = process.ExitCode;
-                    if (exitCode != (int)RET_ERRORS.RET_NO_ERROR)
-                    {
-                        throw new Exception(stderr);
-                    }
-
-                    //if (arguments == "query")
-                    //{
-                    //    if (stdout.IsNullOrWhiteSpace() || stdout.IsNullOrEmpty())
-                    //    {
-                    //        throw new Exception("failed to query wininet settings");
-                    //    }
-                    //    _queryStr = stdout;
-                    //}
-                }
+            if (!NativeMethods.InternetSetOption(IntPtr.Zero, InternetOptionRefresh, IntPtr.Zero, 0))
+            {
+                throw new Win32Exception(Marshal.GetLastWin32Error());
             }
         }
 
-
+        private static class NativeMethods
+        {
+            [DllImport("wininet.dll", SetLastError = true)]
+            [return: MarshalAs(UnmanagedType.Bool)]
+            internal static extern bool InternetSetOption(
+                IntPtr hInternet,
+                int dwOption,
+                IntPtr lpBuffer,
+                int dwBufferLength);
+        }
     }
 }

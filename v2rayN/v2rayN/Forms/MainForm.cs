@@ -270,15 +270,15 @@ namespace v2rayN.Forms
             lvServers.RegisterDragEvent(UpdateDragEventHandler);
 
             lvServers.Columns.Add("", 30);
-            lvServers.Columns.Add(ResUI.LvServiceType, 80);
-            lvServers.Columns.Add(ResUI.LvAlias, 100);
+            lvServers.Columns.Add(ResUI.LvServiceType, 60);
+            lvServers.Columns.Add(ResUI.LvAlias, 80);
             lvServers.Columns.Add(ResUI.LvAddress, 120);
-            lvServers.Columns.Add(ResUI.LvPort, 100);
-            lvServers.Columns.Add(ResUI.LvEncryptionMethod, 120);
-            lvServers.Columns.Add(ResUI.LvTransportProtocol, 120);
-            lvServers.Columns.Add(ResUI.LvTLS, 100);
-            lvServers.Columns.Add(ResUI.LvSubscription, 100);
-            lvServers.Columns.Add(ResUI.LvTestResults, 120, HorizontalAlignment.Right);
+            lvServers.Columns.Add(ResUI.LvPort, 40);
+            lvServers.Columns.Add(ResUI.LvEncryptionMethod, 60);
+            lvServers.Columns.Add(ResUI.LvTransportProtocol, 60);
+            lvServers.Columns.Add(ResUI.LvTLS, 60);
+            lvServers.Columns.Add(ResUI.LvSubscription, 80);
+            lvServers.Columns.Add(ResUI.LvTestResults, 80, HorizontalAlignment.Right);
 
             if (config.enableStatistics)
             {

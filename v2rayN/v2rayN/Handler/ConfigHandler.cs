@@ -1486,17 +1486,36 @@ namespace v2rayN.Handler
 
         public static string GetRoutingRemarksForDisplay(string remarks)
         {
-            switch (remarks)
+            if (string.IsNullOrWhiteSpace(remarks))
             {
-                case "绕过大陆(Whitelist)":
-                    return ResUI.RoutingBypassMainland;
-                case "黑名单(Blacklist)":
-                    return ResUI.RoutingBlacklist;
-                case "全局(Global)":
-                    return ResUI.RoutingGlobal;
-                default:
-                    return remarks ?? string.Empty;
+                return string.Empty;
             }
+
+            // Routing remarks are persisted in the config file. Match both the
+            // original Chinese names and their English/legacy equivalents so
+            // existing profiles are localized without changing stored values.
+            string normalized = remarks.Trim().Replace(" ", string.Empty);
+
+            if (string.Equals(normalized, "绕过大陆(Whitelist)", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "BypassMainland(Whitelist)", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "绕过大陆(白名单)", StringComparison.OrdinalIgnoreCase))
+            {
+                return ResUI.RoutingBypassMainland;
+            }
+
+            if (string.Equals(normalized, "黑名单(Blacklist)", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "Blacklist", StringComparison.OrdinalIgnoreCase))
+            {
+                return ResUI.RoutingBlacklist;
+            }
+
+            if (string.Equals(normalized, "全局(Global)", StringComparison.OrdinalIgnoreCase)
+                || string.Equals(normalized, "Global", StringComparison.OrdinalIgnoreCase))
+            {
+                return ResUI.RoutingGlobal;
+            }
+
+            return remarks;
         }
 
         public static int InitBuiltinRouting(ref Config config, bool blImportAdvancedRules = false)

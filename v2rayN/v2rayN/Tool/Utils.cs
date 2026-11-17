@@ -700,16 +700,24 @@ namespace v2rayN
         /// </summary>
         /// <param name="release">需要的版本4.6.2=394802;4.8=528040</param>
         /// <returns></returns>
-        public static bool CheckForDotNetVersion(int release = 528040)
+        public static bool CheckForDotNetVersion(int release = 0)
         {
             const string subkey = @"SOFTWARE\Microsoft\NET Framework Setup\NDP\v4\Full\";
             using (RegistryKey ndpKey = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry32).OpenSubKey(subkey))
             {
-                if (ndpKey != null && ndpKey.GetValue("Release") != null)
+                if (ndpKey == null)
                 {
-                    return (int)ndpKey.GetValue("Release") >= release ? true : false;
+                    return false;
                 }
-                return false;
+
+                object releaseValue = ndpKey.GetValue("Release");
+                if (releaseValue != null)
+                {
+                    return Convert.ToInt32(releaseValue) >= release;
+                }
+
+                // .NET Framework 4.0 does not publish the later "Release" DWORD.
+                return ndpKey.GetValue("Install") != null;
             }
         }
 
@@ -788,11 +796,11 @@ namespace v2rayN
         {
             if (enableSecurityProtocolTls13)
             {
-                ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12 | SecurityProtocolType.Tls13;
+                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | (SecurityProtocolType)12288;
             }
             else
             {
-                ServicePointManager.SecurityProtocol |= SecurityProtocolType.Tls12;
+                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;
             }
             ServicePointManager.DefaultConnectionLimit = 256;
         }

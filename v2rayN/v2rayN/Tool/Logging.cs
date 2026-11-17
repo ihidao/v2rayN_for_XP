@@ -43,7 +43,7 @@ namespace v2rayN.Tool
 
         public static void ClearLogs()
         {
-            Task.Run(() =>
+            Task.Factory.StartNew(() =>
             {
                 try
                 {

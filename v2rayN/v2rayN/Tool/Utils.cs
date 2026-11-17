@@ -796,7 +796,7 @@ namespace v2rayN
         {
             if (enableSecurityProtocolTls13)
             {
-                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072 | (SecurityProtocolType)12288;
+                ServicePointManager.SecurityProtocol |= (SecurityProtocolType)3072;
             }
             else
             {

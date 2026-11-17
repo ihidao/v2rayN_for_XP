@@ -479,4 +479,14 @@
   <data name="CoreTypeV2RayLegacy" xml:space="preserve"><value>v2ray_core (5.0以下)</value></data>
   <data name="CoreTypeXray1" xml:space="preserve"><value>xray_core (1.0及以上)</value></data>
   <data name="CoreTypeXrayLegacy" xml:space="preserve"><value>xray_core (1.0以下)</value></data>
+
+  <data name="RoutingBypassMainland" xml:space="preserve">
+    <value>绕过大陆(Whitelist)</value>
+  </data>
+  <data name="RoutingBlacklist" xml:space="preserve">
+    <value>黑名单(Blacklist)</value>
+  </data>
+  <data name="RoutingGlobal" xml:space="preserve">
+    <value>全局(Global)</value>
+  </data>
 </root>

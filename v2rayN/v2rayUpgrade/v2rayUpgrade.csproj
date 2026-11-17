@@ -11,6 +11,6 @@
   <ItemGroup>
     <Reference Include="System.Web" />
     <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies.net40" Version="1.0.3" PrivateAssets="All" />
-    <PackageReference Include="SharpZipLib" Version="0.86.0" />
+    <PackageReference Include="ICSharpCode.SharpZipLib.Patched" Version="0.86.5.3" />
   </ItemGroup>
 </Project>
